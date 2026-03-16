@@ -89,7 +89,6 @@ const App = () => (
               <Route path="/audit" element={<AuditPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 
             {/* Root redirect */}
