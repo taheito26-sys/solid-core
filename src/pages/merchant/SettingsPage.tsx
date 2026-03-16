@@ -12,11 +12,11 @@ import { toast } from 'sonner';
 import {
   useTheme,
   LAYOUTS,
-  THEME_COLORS,
   THEME_NAMES,
   FONTS,
   FONT_SIZES,
   VISION_PROFILES,
+  type ThemeDef,
 } from '@/lib/theme-context';
 
 export default function SettingsPage() {
