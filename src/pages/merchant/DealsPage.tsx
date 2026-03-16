@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { deals as dealsApi } from '@/lib/api';
+import { getDemoMode } from '@/lib/demo-mode';
+import { getDemoDeals } from '@/lib/network-demo-data';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Briefcase } from 'lucide-react';
+import { Loader2, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MerchantDeal } from '@/types/domain';
 
@@ -25,8 +26,12 @@ export default function DealsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { deals: d } = await dealsApi.list();
-        setAllDeals(d);
+        if (getDemoMode()) {
+          setAllDeals(getDemoDeals());
+        } else {
+          const { deals: d } = await dealsApi.list();
+          setAllDeals(d);
+        }
       } catch (err: any) {
         toast.error(err.message);
       } finally {

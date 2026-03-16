@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { merchant as merchantApi, invites as invitesApi, relationships as relApi, approvals as approvalsApi } from '@/lib/api';
+import { getDemoMode } from '@/lib/demo-mode';
+import {
+  DEMO_RELATIONSHIPS, DEMO_INVITES_INBOX, DEMO_INVITES_SENT,
+  DEMO_APPROVALS_INBOX, DEMO_APPROVALS_SENT, searchDemoMerchants,
+} from '@/lib/network-demo-data';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,9 +67,14 @@ export default function NetworkPage() {
   const loadInvites = async () => {
     setInvLoading(true);
     try {
-      const [i, s] = await Promise.all([invitesApi.inbox(), invitesApi.sent()]);
-      setInbox(i.invites);
-      setSent(s.invites);
+      if (getDemoMode()) {
+        setInbox([...DEMO_INVITES_INBOX]);
+        setSent([...DEMO_INVITES_SENT]);
+      } else {
+        const [i, s] = await Promise.all([invitesApi.inbox(), invitesApi.sent()]);
+        setInbox(i.invites);
+        setSent(s.invites);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to load invites');
     } finally {
@@ -75,8 +85,12 @@ export default function NetworkPage() {
   const loadRels = async () => {
     setRelLoading(true);
     try {
-      const { relationships } = await relApi.list();
-      setRels(relationships);
+      if (getDemoMode()) {
+        setRels([...DEMO_RELATIONSHIPS]);
+      } else {
+        const { relationships } = await relApi.list();
+        setRels(relationships);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to load relationships');
     } finally {
@@ -87,9 +101,14 @@ export default function NetworkPage() {
   const loadApprovals = async () => {
     setAprLoading(true);
     try {
-      const [i, s] = await Promise.all([approvalsApi.inbox(), approvalsApi.sent()]);
-      setAprInbox(i.approvals);
-      setAprSent(s.approvals);
+      if (getDemoMode()) {
+        setAprInbox([...DEMO_APPROVALS_INBOX]);
+        setAprSent([...DEMO_APPROVALS_SENT]);
+      } else {
+        const [i, s] = await Promise.all([approvalsApi.inbox(), approvalsApi.sent()]);
+        setAprInbox(i.approvals);
+        setAprSent(s.approvals);
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -108,8 +127,12 @@ export default function NetworkPage() {
     if (query.length < 2) { toast.error('Enter at least 2 characters'); return; }
     setSearchLoading(true);
     try {
-      const { results: r } = await merchantApi.search(query);
-      setResults(r);
+      if (getDemoMode()) {
+        setResults(searchDemoMerchants(query));
+      } else {
+        const { results: r } = await merchantApi.search(query);
+        setResults(r);
+      }
       setSearched(true);
     } catch (err: any) {
       toast.error(err.message || 'Search failed');
@@ -119,19 +142,54 @@ export default function NetworkPage() {
   };
 
   const handleAcceptInvite = async (id: string) => {
-    try { await invitesApi.accept(id); toast.success('Invite accepted!'); loadInvites(); loadRels(); } catch (err: any) { toast.error(err.message); }
+    try {
+      if (getDemoMode()) {
+        setInbox(prev => prev.map(i => i.id === id ? { ...i, status: 'accepted' as const } : i));
+        toast.success('Invite accepted!');
+        return;
+      }
+      await invitesApi.accept(id); toast.success('Invite accepted!'); loadInvites(); loadRels();
+    } catch (err: any) { toast.error(err.message); }
   };
   const handleRejectInvite = async (id: string) => {
-    try { await invitesApi.reject(id); toast.success('Invite rejected'); loadInvites(); } catch (err: any) { toast.error(err.message); }
+    try {
+      if (getDemoMode()) {
+        setInbox(prev => prev.map(i => i.id === id ? { ...i, status: 'rejected' as const } : i));
+        toast.success('Invite rejected');
+        return;
+      }
+      await invitesApi.reject(id); toast.success('Invite rejected'); loadInvites();
+    } catch (err: any) { toast.error(err.message); }
   };
   const handleWithdrawInvite = async (id: string) => {
-    try { await invitesApi.withdraw(id); toast.success('Invite withdrawn'); loadInvites(); } catch (err: any) { toast.error(err.message); }
+    try {
+      if (getDemoMode()) {
+        setSent(prev => prev.map(i => i.id === id ? { ...i, status: 'withdrawn' as const } : i));
+        toast.success('Invite withdrawn');
+        return;
+      }
+      await invitesApi.withdraw(id); toast.success('Invite withdrawn'); loadInvites();
+    } catch (err: any) { toast.error(err.message); }
   };
   const handleApprove = async (id: string) => {
-    try { await approvalsApi.approve(id); toast.success('Approved'); loadApprovals(); } catch (err: any) { toast.error(err.message); }
+    try {
+      if (getDemoMode()) {
+        setAprInbox(prev => prev.map(a => a.id === id ? { ...a, status: 'approved' as const, resolved_at: new Date().toISOString() } : a));
+        toast.success('Approved');
+        return;
+      }
+      await approvalsApi.approve(id); toast.success('Approved'); loadApprovals();
+    } catch (err: any) { toast.error(err.message); }
   };
   const handleReject = async (id: string) => {
-    try { await approvalsApi.reject(id); toast.success('Rejected'); loadApprovals(); } catch (err: any) { toast.error(err.message); }
+    try {
+      if (getDemoMode()) {
+        setAprInbox(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected' as const, resolved_at: new Date().toISOString() } : a));
+        toast.success('Rejected');
+        return;
+      }
+      await approvalsApi.reject(id); toast.success('Rejected'); loadApprovals();
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const pendingInvites = inbox.filter(i => i.status === 'pending').length;
@@ -344,6 +402,11 @@ export default function NetworkPage() {
                 ))}
               </TabsContent>
               <TabsContent value="apr-sent" className="mt-3 space-y-3">
+                {aprSent.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>No submitted approvals</p>
+                  </div>
+                )}
                 {aprSent.map(a => (
                   <Card key={a.id} className="glass">
                     <CardContent className="flex items-center justify-between p-4">
