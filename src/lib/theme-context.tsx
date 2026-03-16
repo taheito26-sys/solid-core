@@ -523,14 +523,7 @@ function loadLogs(): LogEntry[] {
   return [];
 }
 
-function visionMultiplier(profile: string): number {
-  switch (profile) {
-    case 'compact': return 0.9;
-    case 'comfortable': return 1.1;
-    case 'large': return 1.25;
-    default: return 1;
-  }
-}
+// visionMultiplier removed — now using detectOptimalFontSize from FONT_CONFIG
 
 function getTheme(layoutId: string, themeId: string): { layout: LayoutDef; theme: ThemeDef } {
   const layout = LAYOUTS.find(l => l.id === layoutId) || LAYOUTS[0];
