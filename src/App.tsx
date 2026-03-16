@@ -21,6 +21,7 @@ import AuditPage from "./pages/merchant/AuditPage";
 import SettingsPage from "./pages/merchant/SettingsPage";
 import CRMPage from "./pages/merchant/CRMPage";
 import P2PTrackerPage from "./pages/trading/P2PTrackerPage";
+import VaultPage from "./pages/trading/VaultPage";
 import PortfolioPage from "./pages/trading/PortfolioPage";
 import TradesPage from "./pages/trading/TradesPage";
 import OrdersPage from "./pages/trading/OrdersPage";

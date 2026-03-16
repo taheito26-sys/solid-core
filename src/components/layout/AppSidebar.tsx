@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Calendar,
   UserCircle,
+  CloudUpload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
