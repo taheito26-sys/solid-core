@@ -29,7 +29,6 @@ const tradingNav: { labelKey: TranslationKey; icon: any; path: string }[] = [
   { labelKey: 'stock', icon: Wallet, path: '/trading/stock' },
   { labelKey: 'calendar', icon: Calendar, path: '/trading/calendar' },
   { labelKey: 'p2pTracker', icon: TrendingUp, path: '/trading/p2p' },
-  { labelKey: 'p2pQar', icon: TrendingUp, path: '/trading/p2p-qar' },
   { labelKey: 'portfolio', icon: Wallet, path: '/trading/portfolio' },
   { labelKey: 'trades', icon: ArrowLeftRight, path: '/trading/trades' },
   { labelKey: 'crm', icon: UserCircle, path: '/crm' },

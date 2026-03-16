@@ -30,7 +30,7 @@ const translations = {
   stock: { en: 'Stock', ar: 'المخزون' },
   calendar: { en: 'Calendar', ar: 'التقويم' },
   p2pTracker: { en: 'P2P Market', ar: 'سوق P2P' },
-  p2pQar: { en: 'P2P QAR', ar: 'P2P ريال' },
+  
   portfolio: { en: 'Portfolio', ar: 'المحفظة' },
   trades: { en: 'Trades', ar: 'الصفقات' },
   crm: { en: 'CRM', ar: 'إدارة العملاء' },

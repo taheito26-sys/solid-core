@@ -16,6 +16,7 @@ export default function P2PTrackerPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [historyRange, setHistoryRange] = useState<'7d' | '15d'>('7d');
 
   // Position Advisor state
@@ -70,20 +71,27 @@ export default function P2PTrackerPage() {
     };
   }, [history]);
 
-  // Filter history by range
-  const filteredHistory = useMemo(() => {
-    const now = Date.now();
-    const days = historyRange === '15d' ? 15 : 7;
-    const cutoff = now - days * 24 * 60 * 60 * 1000;
+  // Price History: 24 hours only (like source repo)
+  const last24hHistory = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     return history.filter(h => h.ts >= cutoff);
-  }, [history, historyRange]);
+  }, [history]);
 
-  // Price history bars data (horizontal bars)
+  // Price history bars data (horizontal bars) — 24h only
   const priceBarData = useMemo(() => {
     const maxPoints = 80;
-    const step = Math.max(1, Math.floor(filteredHistory.length / maxPoints));
-    return filteredHistory.filter((_, i) => i % step === 0 || i === filteredHistory.length - 1);
-  }, [filteredHistory]);
+    const step = Math.max(1, Math.floor(last24hHistory.length / maxPoints));
+    return last24hHistory.filter((_, i) => i % step === 0 || i === last24hHistory.length - 1);
+  }, [last24hHistory]);
+
+  // Historical daily summaries for the lookback section
+  const dailySummaries = useMemo(() => computeDailySummaries(history), [history]);
+
+  const filteredSummaries = useMemo(() => {
+    const days = historyRange === '15d' ? 15 : 7;
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return dailySummaries.filter(d => d.date >= cutoff);
+  }, [dailySummaries, historyRange]);
 
   // Position advisor calculations
   const targetPrice = useMemo(() => avPrice * (1 + targetMargin / 100), [avPrice, targetMargin]);
@@ -122,20 +130,20 @@ export default function P2PTrackerPage() {
     }
   }, [snapshot, calcMode]);
 
-  // Sell/Buy change from previous point
+  // Sell/Buy change from previous point (24h)
   const sellChange = useMemo(() => {
-    if (filteredHistory.length < 2) return 0;
-    const prev = filteredHistory[filteredHistory.length - 2];
-    const curr = filteredHistory[filteredHistory.length - 1];
+    if (last24hHistory.length < 2) return 0;
+    const prev = last24hHistory[last24hHistory.length - 2];
+    const curr = last24hHistory[last24hHistory.length - 1];
     return Math.round(((curr.sellAvg ?? 0) - (prev.sellAvg ?? 0)) * 1000) / 1000;
-  }, [filteredHistory]);
+  }, [last24hHistory]);
 
   const buyChange = useMemo(() => {
-    if (filteredHistory.length < 2) return 0;
-    const prev = filteredHistory[filteredHistory.length - 2];
-    const curr = filteredHistory[filteredHistory.length - 1];
+    if (last24hHistory.length < 2) return 0;
+    const prev = last24hHistory[last24hHistory.length - 2];
+    const curr = last24hHistory[last24hHistory.length - 1];
     return Math.round(((curr.buyAvg ?? 0) - (prev.buyAvg ?? 0)) * 1000) / 1000;
-  }, [filteredHistory]);
+  }, [last24hHistory]);
 
   // Check if offer fits user stock/cash
   const fitsStock = (o: P2POffer) => o.min <= userStock * o.price && o.max >= o.min;
@@ -167,7 +175,7 @@ export default function P2PTrackerPage() {
           </span>
         )}
         <span className="pill good" style={{ cursor: 'pointer' }} onClick={() => setAutoRefresh(!autoRefresh)}>
-          ● {autoRefresh ? `Backend · ${historyRange} monitoring active` : `Backend · ${historyRange} monitoring`}
+          ● {autoRefresh ? 'Backend · 24h monitoring active' : 'Backend · 24h monitoring'}
         </span>
         {snapshot.spread != null && snapshot.spreadPct != null && (
           <span className="pill warn">
@@ -177,11 +185,6 @@ export default function P2PTrackerPage() {
         {isBelowTarget && (
           <span className="pill bad">⚠ Below target</span>
         )}
-        {/* History Range Toggle */}
-        <div className="tracker-seg" style={{ marginLeft: 'auto' }}>
-          <button className={historyRange === '7d' ? 'active' : ''} onClick={() => setHistoryRange('7d')}>7D</button>
-          <button className={historyRange === '15d' ? 'active' : ''} onClick={() => setHistoryRange('15d')}>15D</button>
-        </div>
       </div>
 
       {/* ── 6 KPI Cards ── */}
@@ -228,11 +231,11 @@ export default function P2PTrackerPage() {
 
       {/* ── Price History + Position Advisor (2 col) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        {/* Price History */}
+        {/* Price History — 24h only */}
         <div className="panel">
           <div className="panel-head">
             <h2>📊 Price History</h2>
-            <span className="pill">{filteredHistory.length} pts · {historyRange}</span>
+            <span className="pill">{last24hHistory.length} pts · 24h</span>
           </div>
           <div className="panel-body">
             {/* SELL AVG bars */}
@@ -438,7 +441,7 @@ export default function P2PTrackerPage() {
       </div>
 
       {/* ── Calculator ── */}
-      <div className="panel">
+      <div className="panel" style={{ marginBottom: 10 }}>
         <div className="panel-head">
           <h2>🧮 Calculator</h2>
           <div className="modeToggle">
@@ -471,6 +474,63 @@ export default function P2PTrackerPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Historical Averages (collapsible) ── */}
+      <div className="panel">
+        <div className="panel-head" style={{ cursor: 'pointer' }} onClick={() => setShowHistory(!showHistory)}>
+          <h2>📅 Historical Averages</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {showHistory && (
+              <div className="tracker-seg">
+                <button className={historyRange === '7d' ? 'active' : ''} onClick={e => { e.stopPropagation(); setHistoryRange('7d'); }}>7D</button>
+                <button className={historyRange === '15d' ? 'active' : ''} onClick={e => { e.stopPropagation(); setHistoryRange('15d'); }}>15D</button>
+              </div>
+            )}
+            <span className="pill">{showHistory ? '▼' : '▶'} {filteredSummaries.length} days</span>
+          </div>
+        </div>
+        {showHistory && (
+          <div className="panel-body" style={{ padding: 0 }}>
+            <div className="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>DATE</th>
+                    <th>SELL HIGH</th>
+                    <th>SELL LOW</th>
+                    <th>SELL AVG</th>
+                    <th>BUY HIGH</th>
+                    <th>BUY LOW</th>
+                    <th>BUY AVG</th>
+                    <th>SPREAD</th>
+                    <th>POLLS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSummaries.map(d => {
+                    const avgSell = (d.highSell + (d.lowSell ?? d.highSell)) / 2;
+                    const avgBuy = (d.highBuy + (d.lowBuy ?? d.highBuy)) / 2;
+                    const spread = avgSell - avgBuy;
+                    return (
+                      <tr key={d.date}>
+                        <td className="mono">{d.date}</td>
+                        <td className="mono r good">{d.highSell.toFixed(3)}</td>
+                        <td className="mono r" style={{ color: 'color-mix(in srgb, var(--good) 60%, var(--muted))' }}>{d.lowSell?.toFixed(3) ?? '—'}</td>
+                        <td className="mono r good" style={{ fontWeight: 800 }}>{avgSell.toFixed(3)}</td>
+                        <td className="mono r bad">{d.highBuy.toFixed(3)}</td>
+                        <td className="mono r" style={{ color: 'color-mix(in srgb, var(--bad) 60%, var(--muted))' }}>{d.lowBuy?.toFixed(3) ?? '—'}</td>
+                        <td className="mono r bad" style={{ fontWeight: 800 }}>{avgBuy.toFixed(3)}</td>
+                        <td className="mono r warn">{spread.toFixed(3)}</td>
+                        <td className="mono r muted">{d.polls}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
