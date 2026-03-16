@@ -57,7 +57,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Merchant Type</Label>
-                <Select value={form.merchant_type} onValueChange={v => setForm(f => ({ ...f, merchant_type: v }))}>
+                <Select value={form.merchant_type} onValueChange={v => setForm(f => ({ ...f, merchant_type: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="independent">Independent</SelectItem>
