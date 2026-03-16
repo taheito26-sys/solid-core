@@ -25,6 +25,9 @@ import SettingsPage from "./pages/merchant/SettingsPage";
 import P2PTrackerPage from "./pages/trading/P2PTrackerPage";
 import PortfolioPage from "./pages/trading/PortfolioPage";
 import TradesPage from "./pages/trading/TradesPage";
+import OrdersPage from "./pages/trading/OrdersPage";
+import StockPage from "./pages/trading/StockPage";
+import CalendarPage from "./pages/trading/CalendarPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
@@ -77,6 +80,9 @@ const App = () => (
               <Route path="/trading/p2p" element={<P2PTrackerPage />} />
               <Route path="/trading/portfolio" element={<PortfolioPage />} />
               <Route path="/trading/trades" element={<TradesPage />} />
+              <Route path="/trading/orders" element={<OrdersPage />} />
+              <Route path="/trading/stock" element={<StockPage />} />
+              <Route path="/trading/calendar" element={<CalendarPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 

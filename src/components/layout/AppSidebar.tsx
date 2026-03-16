@@ -37,6 +37,9 @@ const merchantNav = [
 
 const tradingNav = [
   { label: 'P2P Tracker', icon: TrendingUp, path: '/trading/p2p' },
+  { label: 'Orders', icon: ArrowLeftRight, path: '/trading/orders' },
+  { label: 'Stock', icon: Wallet, path: '/trading/stock' },
+  { label: 'Calendar', icon: LayoutDashboard, path: '/trading/calendar' },
   { label: 'Portfolio', icon: Wallet, path: '/trading/portfolio' },
   { label: 'Trades', icon: ArrowLeftRight, path: '/trading/trades' },
 ];
