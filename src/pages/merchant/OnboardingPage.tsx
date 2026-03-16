@@ -50,7 +50,7 @@ export default function OnboardingPage() {
       await merchantApi.ensureProfile(form);
       await refreshProfile();
       toast.success('Merchant portfolio created!');
-      navigate('/merchant');
+      navigate('/dashboard');
     } catch (err: any) {
       toast.error(err.message || 'Failed to create profile');
     } finally {
