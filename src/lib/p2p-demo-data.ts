@@ -1,22 +1,24 @@
 // ─── P2P Demo Data Generator ─────────────────────────────────────
-// Generates realistic 7-day USDT/QAR price history matching
+// Generates realistic USDT/QAR price history matching
 // the source repo's Binance P2P scraper output format.
+// Extended to support 7d and 15d history.
 
 import type { P2PSnapshot, P2PHistoryPoint, P2POffer } from '@/types/domain';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const HISTORY_DAYS = 7;
-const HISTORY_POINTS = (60 / 5) * 24 * HISTORY_DAYS; // 2016
+const HISTORY_DAYS = 15; // Generate 15 days for full range support
+const HISTORY_POINTS = (60 / 5) * 24 * HISTORY_DAYS; // 4320
 
 const NICKS = [
+  'NEWTECHD...', 'Issasalim', 'يو-خيد', 'GuinueineBoy',
+  'ENG_ABDULLA', 'TAMIM_A7MED', 'EXCHANGE-R...', 'm7md1912',
+  'HectorSrk', 'CRYPTOknightt16', 'AL-ISHFA -CRYP...', 'SMAK5',
   'QatarOTC', 'AhmedTrader', 'GulfExchange', 'DohaP2P',
-  'KhalifaCrypto', 'SouqUSDT', 'AlWakraFX', 'PearlTrader',
-  'RasLaffanOTC', 'MesaieedFX', 'WestBayTrader', 'LusailOTC',
 ];
 
 const METHODS = [
-  'QNB', 'CBQ', 'Masraf', 'QIIB', 'Doha Bank',
-  'Cash', 'Vodafone Cash', 'Bank Transfer',
+  'Bank Transfer', 'Qatar National Bank QNB', 'Cash app', 'M Pay',
+  'CB Pay', 'Cashpack', 'Qatar Islamic Bank QIB', 'Vodafone Cash',
 ];
 
 function seededRandom(seed: number): () => number {
@@ -32,8 +34,8 @@ function generateOffers(rng: () => number, side: 'sell' | 'buy', basePrice: numb
   const offers: P2POffer[] = [];
   for (let i = 0; i < count; i++) {
     const offset = side === 'sell'
-      ? basePrice + (rng() * 0.06 - 0.01)
-      : basePrice - (rng() * 0.06 - 0.01);
+      ? basePrice + (rng() * 0.03 - 0.005)
+      : basePrice - (rng() * 0.03 - 0.005);
     const price = Math.round(offset * 100) / 100;
     const methodCount = 1 + Math.floor(rng() * 3);
     const methods: string[] = [];
@@ -43,14 +45,14 @@ function generateOffers(rng: () => number, side: 'sell' | 'buy', basePrice: numb
     }
     offers.push({
       price,
-      min: Math.round((500 + rng() * 1500) / 10) * 10,
-      max: Math.round((5000 + rng() * 45000) / 100) * 100,
+      min: Math.round((100 + rng() * 5000) / 10) * 10,
+      max: Math.round((3000 + rng() * 75000) / 100) * 100,
       nick: NICKS[Math.floor(rng() * NICKS.length)],
       methods,
       available: Math.round((500 + rng() * 15000) * 100) / 100,
     });
   }
-  // Sort: sell = highest first, buy = lowest first (matching source parseSide)
+  // Sort: sell = highest first (best for seller), buy = lowest first (best for buyer/restocking)
   offers.sort((a, b) => side === 'sell' ? b.price - a.price : a.price - b.price);
   return offers;
 }
@@ -71,23 +73,20 @@ export function generateP2PHistory(): { snapshot: P2PSnapshot; history: P2PHisto
   const rng = seededRandom(42);
   const now = Date.now();
   const startTs = now - HISTORY_DAYS * 24 * 60 * 60 * 1000;
-  
-  const history: P2PHistoryPoint[] = [];
-  let baseSell = 3.78;
-  let baseBuy = 3.74;
 
-  // Generate 7 days of history at 5-min intervals
+  const history: P2PHistoryPoint[] = [];
+  let baseSell = 3.79;
+  let baseBuy = 3.72;
+
   for (let i = 0; i < HISTORY_POINTS; i++) {
     const ts = startTs + i * POLL_INTERVAL_MS;
-    
-    // Add realistic price drift with daily cycles
     const hourOfDay = new Date(ts).getHours();
-    const dayFactor = Math.sin((hourOfDay - 6) * Math.PI / 12) * 0.005; // Peak at noon
-    const noise = (rng() - 0.5) * 0.02;
+    const dayFactor = Math.sin((hourOfDay - 6) * Math.PI / 12) * 0.005;
+    const noise = (rng() - 0.5) * 0.015;
     const drift = (rng() - 0.5) * 0.002;
-    
-    baseSell = Math.max(3.70, Math.min(3.85, baseSell + drift + dayFactor * 0.1));
-    baseBuy = baseSell - 0.03 - rng() * 0.02;
+
+    baseSell = Math.max(3.75, Math.min(3.85, baseSell + drift + dayFactor * 0.1));
+    baseBuy = baseSell - 0.06 - rng() * 0.02;
 
     const sellAvg = Math.round((baseSell + noise) * 1000) / 1000;
     const buyAvg = Math.round((baseBuy + noise * 0.8) * 1000) / 1000;
@@ -124,7 +123,7 @@ export function generateP2PHistory(): { snapshot: P2PSnapshot; history: P2PHisto
   return { snapshot, history };
 }
 
-/** Compute daily high/low summary from history (matches source's p2p:day:YYYY-MM-DD) */
+/** Compute daily high/low summary from history */
 export interface P2PDaySummary {
   date: string;
   highSell: number;
