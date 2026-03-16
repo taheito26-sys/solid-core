@@ -16,6 +16,8 @@ import {
   FONTS,
   FONT_SIZES,
   VISION_PROFILES,
+  FONT_CONFIG,
+  detectOptimalFontSize,
   type ThemeDef,
 } from '@/lib/theme-context';
 
