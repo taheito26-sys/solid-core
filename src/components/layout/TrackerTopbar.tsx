@@ -19,6 +19,8 @@ function titleFromPath(pathname: string, t: ReturnType<typeof useT>) {
   if (pathname === '/trading/orders') return { title: t('tradesTitle'), subtitle: t('tradesSub') };
   if (pathname === '/trading/stock') return { title: t('stockTitle'), subtitle: t('stockSub') };
   if (pathname === '/trading/calendar') return { title: t('calendarTitle'), subtitle: t('calendarSub') };
+  if (pathname === '/trading/p2p') return { title: 'P2P Market', subtitle: 'USDT/QAR · Binance P2P' };
+  if (pathname === '/trading/p2p-qar') return { title: 'P2P QAR', subtitle: 'QAR-centric analysis' };
   if (pathname === '/crm') return { title: t('crmTitle'), subtitle: t('crmSub') };
   if (pathname === '/vault') return { title: t('vaultTitle'), subtitle: t('vaultSub') };
   if (pathname === '/settings') return { title: t('settingsTitle'), subtitle: t('settingsSub') };
