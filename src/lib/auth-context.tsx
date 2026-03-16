@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { auth as authApi, setAuthToken, setCompatAuth, merchant } from '@/lib/api';
+import { isDemoMode, getDemoMode, DEMO_USER, DEMO_PROFILE } from '@/lib/demo-mode';
 import type { MerchantProfile } from '@/types/domain';
 
 interface AuthState {
@@ -8,6 +9,7 @@ interface AuthState {
   userId: string | null;
   email: string | null;
   profile: MerchantProfile | null;
+  isDemoMode: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -21,8 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
+  const [demo, setDemo] = useState(false);
 
   const refreshProfile = useCallback(async () => {
+    if (getDemoMode()) {
+      setProfile(DEMO_PROFILE);
+      return;
+    }
     try {
       const { profile: p } = await merchant.getMyProfile();
       setProfile(p);
@@ -33,6 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
+      const demoActive = await isDemoMode();
+      setDemo(demoActive);
+
+      if (demoActive) {
+        // Auto-login in demo mode
+        setUserId(DEMO_USER.user_id);
+        setEmail(DEMO_USER.email);
+        setProfile(DEMO_PROFILE);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const session = await authApi.session();
         if (session) {
@@ -50,6 +69,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfile]);
 
   const login = useCallback(async (email: string, password: string) => {
+    if (getDemoMode()) {
+      setUserId(DEMO_USER.user_id);
+      setEmail(DEMO_USER.email);
+      setProfile(DEMO_PROFILE);
+      return;
+    }
     const result = await authApi.login(email, password);
     setAuthToken(result.token);
     setUserId(result.user_id);
@@ -59,11 +84,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfile]);
 
   const signup = useCallback(async (email: string, password: string) => {
+    if (getDemoMode()) {
+      // In demo mode, just succeed
+      return;
+    }
     await authApi.signup(email, password);
   }, []);
 
   const logout = useCallback(async () => {
-    try { await authApi.logout(); } catch {}
+    if (!getDemoMode()) {
+      try { await authApi.logout(); } catch {}
+    }
     setAuthToken(null);
     setUserId(null);
     setEmail(null);
@@ -77,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId,
       email,
       profile,
+      isDemoMode: demo,
       login,
       signup,
       logout,
