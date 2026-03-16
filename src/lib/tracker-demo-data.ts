@@ -41,22 +41,27 @@ function makeCust(): Customer[] {
   ];
 }
 
-export function createDemoState(settingsOverrides?: Partial<TrackerState['settings']>): { state: TrackerState; derived: DerivedState } {
+type DemoOverrides = Partial<TrackerState['settings']> & {
+  range?: TrackerState['range'];
+  currency?: TrackerState['currency'];
+};
+
+export function createDemoState(overrides?: DemoOverrides): { state: TrackerState; derived: DerivedState } {
   const batches = makeBatches();
   const customers = makeCust();
   const trades = makeTrades(batches);
 
   const state: TrackerState = {
-    currency: 'QAR',
-    range: '7d',
+    currency: overrides?.currency ?? 'QAR',
+    range: overrides?.range ?? '7d',
     batches,
     trades,
     customers,
     cashQAR: 45000,
     cashOwner: 'Main Account',
     settings: {
-      lowStockThreshold: settingsOverrides?.lowStockThreshold ?? 5000,
-      priceAlertThreshold: settingsOverrides?.priceAlertThreshold ?? 2,
+      lowStockThreshold: overrides?.lowStockThreshold ?? 5000,
+      priceAlertThreshold: overrides?.priceAlertThreshold ?? 2,
     },
     cal: { year: new Date().getFullYear(), month: new Date().getMonth(), selectedDay: null },
   };
