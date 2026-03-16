@@ -4,18 +4,23 @@ import {
   fmtQ, fmtU, fmtP, fmtPct, fmtQWithUnit,
 } from '@/lib/tracker-helpers';
 import { useTheme } from '@/lib/theme-context';
+import { useT } from '@/lib/i18n';
 import '@/styles/tracker.css';
 
 export default function CalendarPage() {
   const { settings } = useTheme();
+  const t = useT();
   const { state, derived } = useMemo(() => createDemoState({
     lowStockThreshold: settings.lowStockThreshold,
     priceAlertThreshold: settings.priceAlertThreshold,
   }), [settings.lowStockThreshold, settings.priceAlertThreshold]);
   const [cal, setCal] = useState(state.cal);
 
-  const mn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mnKeys = ['january','february','march','april','may','june','july','august','september','october','november','december'] as const;
+  const dnKeys = ['sun','mon','tue','wed','thu','fri','sat'] as const;
+  const mn = mnKeys.map(k => t(k));
+  const dn = dnKeys.map(k => t(k));
+
   const now = new Date();
   const curY = now.getFullYear(), curM = now.getMonth(), curD = now.getDate();
   const { year, month, selectedDay } = cal;
@@ -26,19 +31,19 @@ export default function CalendarPage() {
   const mData: Record<number, { profit: number; trades: number; volumeQAR: number; wins: number; losses: number; marginSum: number; tradeList: any[] }> = {};
   for (let d = 1; d <= daysInM; d++) mData[d] = { profit: 0, trades: 0, volumeQAR: 0, wins: 0, losses: 0, marginSum: 0, tradeList: [] };
 
-  for (const t of state.trades.filter(t => !t.voided)) {
-    const dt = new Date(t.ts);
+  for (const tr of state.trades.filter(tr => !tr.voided)) {
+    const dt = new Date(tr.ts);
     if (dt.getFullYear() === year && dt.getMonth() === month) {
-      const c = derived.tradeCalc.get(t.id);
+      const c = derived.tradeCalc.get(tr.id);
       const d2 = dt.getDate();
       if (c?.ok) {
-        const rev = t.amountUSDT * t.sellPriceQAR;
+        const rev = tr.amountUSDT * tr.sellPriceQAR;
         mData[d2].profit += c.netQAR;
         mData[d2].volumeQAR += rev;
         mData[d2].trades++;
         mData[d2].marginSum += Number.isFinite(c.margin) ? c.margin : 0;
         (c.netQAR >= 0 ? mData[d2].wins++ : mData[d2].losses++);
-        mData[d2].tradeList.push({ ...t, net: c.netQAR, margin: c.margin, avgBuy: c.avgBuyQAR, rev });
+        mData[d2].tradeList.push({ ...tr, net: c.netQAR, margin: c.margin, avgBuy: c.avgBuyQAR, rev });
       }
     }
   }
@@ -69,35 +74,35 @@ export default function CalendarPage() {
   const selectDay = (d: number) => setCal(prev => ({ ...prev, selectedDay: prev.selectedDay === d ? null : d }));
 
   return (
-    <div className="tracker-root" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: '100%' }}>
+    <div className="tracker-root" dir={t.isRTL ? 'rtl' : 'ltr'} style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: '100%' }}>
       {/* Stats */}
       <div className="cal-stats">
         <div className="cal-stat">
-          <div className="kpi-lbl">Monthly Profit</div>
+          <div className="kpi-lbl">{t('monthlyProfit')}</div>
           <div className={`kpi-val ${totalP >= 0 ? 'good' : 'bad'}`}>{(totalP >= 0 ? '+' : '') + fmtQ(totalP)}</div>
         </div>
         <div className="cal-stat">
-          <div className="kpi-lbl">Total Trades</div>
+          <div className="kpi-lbl">{t('totalTrades')}</div>
           <div className="kpi-val">{totalT}</div>
         </div>
         <div className="cal-stat">
-          <div className="kpi-lbl">Trading Days</div>
+          <div className="kpi-lbl">{t('tradingDays')}</div>
           <div className="kpi-val">
             {tradeDays}
-            {bestDay && <span className="cycle-badge" style={{ marginLeft: 4 }}>Best: {mn[month].slice(0, 3)} {bestDay[0]}</span>}
-            {worstDay && <span className="cycle-badge" style={{ marginLeft: 4 }}>Worst: {mn[month].slice(0, 3)} {worstDay[0]}</span>}
+            {bestDay && <span className="cycle-badge" style={{ marginLeft: 4 }}>{t('best')}: {mn[month].slice(0, 3)} {bestDay[0]}</span>}
+            {worstDay && <span className="cycle-badge" style={{ marginLeft: 4 }}>{t('worst')}: {mn[month].slice(0, 3)} {worstDay[0]}</span>}
           </div>
         </div>
         <div className="cal-stat">
-          <div className="kpi-lbl">Monthly Volume</div>
+          <div className="kpi-lbl">{t('monthlyVolume')}</div>
           <div className="kpi-val">{fmtQWithUnit(totalV)}</div>
         </div>
         <div className="cal-stat">
-          <div className="kpi-lbl">Win Rate</div>
+          <div className="kpi-lbl">{t('winRate')}</div>
           <div className="kpi-val">{(winRate * 100).toFixed(0)}%</div>
         </div>
         <div className="cal-stat">
-          <div className="kpi-lbl">Avg Margin</div>
+          <div className="kpi-lbl">{t('avgMargin')}</div>
           <div className="kpi-val">{fmtPct(avgMargin)}</div>
         </div>
       </div>
@@ -107,9 +112,9 @@ export default function CalendarPage() {
         <div className="panel-head">
           <h2>{mn[month]} {year}</h2>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn secondary" onClick={prevMonth}>← Prev</button>
-            <button className="btn secondary" onClick={goToday}>Today</button>
-            <button className="btn secondary" onClick={nextMonth}>Next →</button>
+            <button className="btn secondary" onClick={prevMonth}>{t('prev')}</button>
+            <button className="btn secondary" onClick={goToday}>{t('today')}</button>
+            <button className="btn secondary" onClick={nextMonth}>{t('next')}</button>
           </div>
         </div>
         <div className="panel-body">
@@ -152,34 +157,34 @@ export default function CalendarPage() {
       {selectedDay && selData && selData.trades > 0 && (
         <div className="cal-detail">
           <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
-            📅 {mn[month]} {selectedDay}, {year} — {selData.trades} trade{selData.trades !== 1 ? 's' : ''} · Vol {fmtQWithUnit(selData.volumeQAR)} · Net {(selData.profit >= 0 ? '+' : '') + fmtQ(selData.profit)} · Win {(selData.trades ? ((selData.wins / selData.trades) * 100).toFixed(0) : '0')}%
+            📅 {mn[month]} {selectedDay}, {year} — {selData.trades} {t('trades')} · Vol {fmtQWithUnit(selData.volumeQAR)} · {t('net')} {(selData.profit >= 0 ? '+' : '') + fmtQ(selData.profit)} · {t('winRate')} {(selData.trades ? ((selData.wins / selData.trades) * 100).toFixed(0) : '0')}%
           </div>
           <div className="tableWrap">
             <table>
               <thead>
                 <tr>
-                  <th>Time</th>
-                  <th className="r">Qty</th>
-                  <th className="r">Avg Buy</th>
-                  <th className="r">Sell</th>
-                  <th className="r">Volume</th>
-                  <th className="r">Net</th>
-                  <th className="r">Margin</th>
+                  <th>{t('time')}</th>
+                  <th className="r">{t('qty')}</th>
+                  <th className="r">{t('avgBuy')}</th>
+                  <th className="r">{t('sell')}</th>
+                  <th className="r">{t('volume')}</th>
+                  <th className="r">{t('net')}</th>
+                  <th className="r">{t('margin')}</th>
                 </tr>
               </thead>
               <tbody>
-                {selData.tradeList.map((t: any) => (
-                  <tr key={t.id}>
-                    <td className="mono">{new Date(t.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="mono r">{fmtU(t.amountUSDT)}</td>
-                    <td className="mono r" style={{ color: 'var(--bad)' }}>{fmtP(t.avgBuy)}</td>
-                    <td className="mono r" style={{ color: 'var(--good)' }}>{fmtP(t.sellPriceQAR)}</td>
-                    <td className="mono r">{fmtQ(t.rev)}</td>
-                    <td className="mono r" style={{ color: t.net >= 0 ? 'var(--good)' : 'var(--bad)', fontWeight: 700 }}>
-                      {(t.net >= 0 ? '+' : '') + fmtQ(t.net)}
+                {selData.tradeList.map((tr: any) => (
+                  <tr key={tr.id}>
+                    <td className="mono">{new Date(tr.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td className="mono r">{fmtU(tr.amountUSDT)}</td>
+                    <td className="mono r" style={{ color: 'var(--bad)' }}>{fmtP(tr.avgBuy)}</td>
+                    <td className="mono r" style={{ color: 'var(--good)' }}>{fmtP(tr.sellPriceQAR)}</td>
+                    <td className="mono r">{fmtQ(tr.rev)}</td>
+                    <td className="mono r" style={{ color: tr.net >= 0 ? 'var(--good)' : 'var(--bad)', fontWeight: 700 }}>
+                      {(tr.net >= 0 ? '+' : '') + fmtQ(tr.net)}
                     </td>
-                    <td className="mono r" style={{ color: t.margin >= 1 ? 'var(--good)' : t.margin < 0 ? 'var(--bad)' : 'var(--warn)' }}>
-                      {fmtPct(t.margin)}
+                    <td className="mono r" style={{ color: tr.margin >= 1 ? 'var(--good)' : tr.margin < 0 ? 'var(--bad)' : 'var(--warn)' }}>
+                      {fmtPct(tr.margin)}
                     </td>
                   </tr>
                 ))}
@@ -191,7 +196,7 @@ export default function CalendarPage() {
       {selectedDay && selData && selData.trades === 0 && (
         <div className="cal-detail">
           <div className="muted" style={{ fontSize: 11, padding: '8px 0' }}>
-            No trades on {mn[month]} {selectedDay}. <button className="rowBtn">Log a trade</button>
+            {t('noTradesOnDay')} {mn[month]} {selectedDay}. <button className="rowBtn">{t('logATrade')}</button>
           </div>
         </div>
       )}

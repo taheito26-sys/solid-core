@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import { createDemoState } from '@/lib/tracker-demo-data';
 import { fmtU, fmtDate } from '@/lib/tracker-helpers';
 import { useTheme } from '@/lib/theme-context';
+import { useT } from '@/lib/i18n';
 import '@/styles/tracker.css';
 
 export default function CRMPage() {
   const { settings } = useTheme();
+  const t = useT();
   const { state } = useMemo(() => createDemoState({
     lowStockThreshold: settings.lowStockThreshold,
     priceAlertThreshold: settings.priceAlertThreshold,
@@ -13,13 +15,11 @@ export default function CRMPage() {
   const [tab, setTab] = useState<'customers' | 'suppliers'>('customers');
   const [search, setSearch] = useState('');
 
-  // Customers from demo state
   const customers = state.customers;
   const filteredCustomers = !search
     ? customers
     : customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search));
 
-  // Suppliers extracted from batches
   const supplierMap = new Map<string, { name: string; batchCount: number; totalUSDT: number; lastDate: number }>();
   for (const b of state.batches) {
     const src = b.source.trim();
@@ -38,16 +38,15 @@ export default function CRMPage() {
     ? suppliers
     : suppliers.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Per-customer trade stats
   const customerStats = (cId: string) => {
-    const trades = state.trades.filter(t => !t.voided && t.customerId === cId);
-    const totalUSDT = trades.reduce((s, t) => s + t.amountUSDT, 0);
-    const totalQAR = trades.reduce((s, t) => s + t.amountUSDT * t.sellPriceQAR, 0);
+    const trades = state.trades.filter(tr => !tr.voided && tr.customerId === cId);
+    const totalUSDT = trades.reduce((s, tr) => s + tr.amountUSDT, 0);
+    const totalQAR = trades.reduce((s, tr) => s + tr.amountUSDT * tr.sellPriceQAR, 0);
     return { trades: trades.length, totalUSDT, totalQAR };
   };
 
   return (
-    <div className="tracker-root" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: '100%' }}>
+    <div className="tracker-root" dir={t.isRTL ? 'rtl' : 'ltr'} style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: '100%' }}>
       {/* Tab toggle */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -55,18 +54,18 @@ export default function CRMPage() {
             className={`btn ${tab === 'customers' ? '' : 'secondary'}`}
             onClick={() => setTab('customers')}
           >
-            👥 Customers ({customers.length})
+            👥 {t('customers')} ({customers.length})
           </button>
           <button
             className={`btn ${tab === 'suppliers' ? '' : 'secondary'}`}
             onClick={() => setTab('suppliers')}
           >
-            📦 Suppliers ({suppliers.length})
+            📦 {t('suppliers')} ({suppliers.length})
           </button>
         </div>
         <div className="inputBox" style={{ maxWidth: 260, padding: '6px 10px' }}>
           <input
-            placeholder={tab === 'customers' ? 'Search customers...' : 'Search suppliers...'}
+            placeholder={tab === 'customers' ? t('searchCustomers') : t('searchSuppliers')}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -78,31 +77,31 @@ export default function CRMPage() {
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800 }}>Customers</div>
-              <div style={{ fontSize: 10, color: 'var(--muted)' }}>Buyer management · trade history</div>
+              <div style={{ fontSize: 13, fontWeight: 800 }}>{t('customers')}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)' }}>{t('buyerManagement')}</div>
             </div>
-            <button className="btn">+ Add Customer</button>
+            <button className="btn">{t('addCustomer')}</button>
           </div>
 
           {filteredCustomers.length === 0 ? (
             <div className="empty">
-              <div className="empty-t">No customers found</div>
-              <div className="empty-s">Add your first buyer to track trades</div>
+              <div className="empty-t">{t('noCustomersFound')}</div>
+              <div className="empty-s">{t('addFirstBuyer')}</div>
             </div>
           ) : (
             <div className="tableWrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Tier</th>
-                    <th className="r">Daily Limit</th>
-                    <th className="r">Trades</th>
-                    <th className="r">Total USDT</th>
-                    <th className="r">Total QAR</th>
-                    <th>Notes</th>
-                    <th>Actions</th>
+                    <th>{t('name')}</th>
+                    <th>{t('phone')}</th>
+                    <th>{t('tier')}</th>
+                    <th className="r">{t('dailyLimit')}</th>
+                    <th className="r">{t('trades')}</th>
+                    <th className="r">{t('totalUsdt')}</th>
+                    <th className="r">{t('totalQar')}</th>
+                    <th>{t('notes')}</th>
+                    <th>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,8 +123,8 @@ export default function CRMPage() {
                         <td style={{ fontSize: 10, color: 'var(--muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.notes || '—'}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="rowBtn">Edit</button>
-                            <button className="rowBtn">History</button>
+                            <button className="rowBtn">{t('edit')}</button>
+                            <button className="rowBtn">{t('history')}</button>
                           </div>
                         </td>
                       </tr>
@@ -143,27 +142,27 @@ export default function CRMPage() {
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800 }}>Suppliers</div>
-              <div style={{ fontSize: 10, color: 'var(--muted)' }}>Auto-tracked from batches · purchase history</div>
+              <div style={{ fontSize: 13, fontWeight: 800 }}>{t('suppliers')}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)' }}>{t('autoTrackedFromBatches')}</div>
             </div>
-            <button className="btn">+ Add Supplier</button>
+            <button className="btn">{t('addSupplier')}</button>
           </div>
 
           {filteredSuppliers.length === 0 ? (
             <div className="empty">
-              <div className="empty-t">No suppliers found</div>
-              <div className="empty-s">Add batches with a source to track suppliers</div>
+              <div className="empty-t">{t('noSuppliersFound')}</div>
+              <div className="empty-s">{t('addBatchesToTrack')}</div>
             </div>
           ) : (
             <div className="tableWrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Supplier</th>
-                    <th className="r">Batches</th>
-                    <th className="r">Total USDT</th>
-                    <th>Last Purchase</th>
-                    <th>Actions</th>
+                    <th>{t('supplier')}</th>
+                    <th className="r">{t('batches')}</th>
+                    <th className="r">{t('totalUsdt')}</th>
+                    <th>{t('lastPurchase')}</th>
+                    <th>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -175,8 +174,8 @@ export default function CRMPage() {
                       <td className="mono">{fmtDate(s.lastDate)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="rowBtn">View Batches</button>
-                          <button className="rowBtn">Edit</button>
+                          <button className="rowBtn">{t('viewBatches')}</button>
+                          <button className="rowBtn">{t('edit')}</button>
                         </div>
                       </td>
                     </tr>
