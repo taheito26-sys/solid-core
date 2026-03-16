@@ -430,6 +430,10 @@ export function detectOptimalFontSize(baseSize: number, visionProfile: string): 
 export interface AppSettings {
   layout: string;
   theme: string;
+  range: 'today' | '7d' | '30d' | 'all';
+  currency: 'QAR' | 'USDT';
+  language: 'en' | 'ar';
+  searchQuery: string;
   lowStockThreshold: number;
   priceAlertThreshold: number;
   allowInvalidTrades: boolean;
@@ -444,6 +448,7 @@ export interface AppSettings {
 
 const DEFAULT_SETTINGS: AppSettings = {
   layout: 'flux', theme: 't1',
+  range: '7d', currency: 'QAR', language: 'en', searchQuery: '',
   lowStockThreshold: 5000, priceAlertThreshold: 2,
   allowInvalidTrades: true,
   ledgerFont: 'Inter', ledgerFontSize: 11,
@@ -759,7 +764,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setDraft(prev => ({ ...prev, ...patch }));
     setDirty(true);
 
-    if (!(patch.logsEnabled === false && changed.length === 1)) {
+    const isTypingOnly = changed.length === 1 && changed[0] === 'searchQuery';
+    if (!(patch.logsEnabled === false && changed.length === 1) && !isTypingOnly) {
       pushLog('info', `Settings updated: ${changed.join(', ')}`);
     }
   }, [draft, pushLog]);
