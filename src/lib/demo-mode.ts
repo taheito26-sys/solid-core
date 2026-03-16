@@ -30,16 +30,16 @@ export const DEMO_USER = {
 
 export const DEMO_PROFILE: MerchantProfile = {
   id: 'demo-merchant-001',
-  user_id: DEMO_USER.user_id,
+  owner_user_id: DEMO_USER.user_id,
+  merchant_id: 'MRC-00000001',
   nickname: 'demo_trader',
   display_name: 'Demo Trader',
   merchant_type: 'independent',
   region: 'MENA',
   default_currency: 'USDT',
   discoverability: 'public',
-  status: 'active',
   bio: 'Demo account for exploring the platform',
-  onboarding_complete: true,
+  status: 'active',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
