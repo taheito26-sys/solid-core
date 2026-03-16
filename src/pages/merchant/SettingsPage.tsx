@@ -42,7 +42,8 @@ export default function SettingsPage() {
     toast('Discarded pending changes');
   };
 
-  const curThemeColors = THEME_COLORS[draft.layout] || THEME_COLORS.flux;
+  const curLayoutDef = LAYOUTS.find(l => l.id === draft.layout) || LAYOUTS[0];
+  const curThemeEntries = Object.entries(curLayoutDef.themes) as [string, ThemeDef][];
 
   return (
     <div className="tracker-page">
