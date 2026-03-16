@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 import LoginPage from "./pages/auth/LoginPage";
@@ -48,6 +49,7 @@ function ProfileGuard({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -87,7 +89,6 @@ const App = () => (
               <Route path="/audit" element={<AuditPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 
             {/* Root redirect */}
@@ -100,6 +101,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
