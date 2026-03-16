@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,123 +5,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Check, Save, RotateCcw } from 'lucide-react';
+import { Check, Save, RotateCcw, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-/* ── Layout & theme configs from the original repo ── */
-const LAYOUTS = [
-  { id: 'flux', name: 'Flux', desc: 'Clean SaaS · rounded', font: 'Inter', swatches: ['#f8faff','#4f46e5','#7c3aed','#16a34a','#dc2626','#0ea5e9','#e11d48','#d97706'] },
-  { id: 'cipher', name: 'Cipher', desc: 'Dark terminal · mono', font: 'JetBrains', swatches: ['#000000','#00ff64','#00d4ff','#ff4040','#ffcc00','#aa44ff','#ff8c00','#6478ff'] },
-  { id: 'aurora', name: 'Aurora', desc: 'AI gradient · ultra-rounded', font: 'Plus Jakarta', swatches: ['#5b21b6','#059669','#e84226','#9333ea','#0284c7','#f43f5e','#3730c8','#16a34a'] },
-  { id: 'carbon', name: 'Carbon', desc: 'Dark precision · mono', font: 'JetBrains', swatches: ['#f59e0b','#22d3ee','#84cc16','#ec4899','#f97316','#a855f7','#0d9488','#6366f1'] },
-  { id: 'prism', name: 'Prism', desc: 'Bold fintech · geometric', font: 'Space Grotesk', swatches: ['#1c2a8c','#991b1b','#14532d','#a16207','#0f172a','#182a64','#7e22ce','#7c4614'] },
-  { id: 'pulse', name: 'Pulse', desc: 'CoinPulse-inspired · dark glass', font: 'DM Sans', swatches: ['#071018','#27e0a3','#2bb8ff','#8b7bff','#ff627e','#ffb84d','#0b1d2d','#12283d'] },
-];
-
-const THEME_NAMES: Record<string, string> = { t1: 'Theme 1', t2: 'Theme 2', t3: 'Theme 3', t4: 'Theme 4', t5: 'Theme 5' };
-
-const THEME_COLORS: Record<string, Record<string, string[]>> = {
-  flux: {
-    t1: ['#4f46e5','#7c3aed','#16a34a','#dc2626','#0ea5e9','#e11d48','#d97706','#0f172a'],
-    t2: ['#0d9488','#059669','#15803d','#dc2626','#0284c7','#f43f5e','#d97706','#6366f1'],
-    t3: ['#e11d48','#db2777','#15803d','#b91c1c','#7c3aed','#0d9488','#d97706','#0284c7'],
-    t4: ['#d97706','#b45309','#15803d','#dc2626','#0284c7','#7c3aed','#e11d48','#0d9488'],
-    t5: ['#334155','#0ea5e9','#15803d','#dc2626','#8b5cf6','#d97706','#e11d48','#0d9488'],
-  },
-  cipher: {
-    t1: ['#00ff64','#00cc50','#44ff88','#ff4040','#00eeff','#aa55ff','#ff8c00','#6478ff'],
-    t2: ['#0096ff','#0064cc','#00d4aa','#ff4455','#aa55ff','#00ff64','#ff8c00','#44ddff'],
-    t3: ['#aa44ff','#8800ee','#44ff88','#ff4466','#44ddff','#00ff64','#ff8c00','#0096ff'],
-    t4: ['#ff8c00','#ff6600','#44ff88','#ff3300','#ff44aa','#0096ff','#aa44ff','#44ddff'],
-    t5: ['#6478ff','#4455ee','#44ffaa','#ff5566','#ff66ff','#00ff64','#ff8c00','#44ddff'],
-  },
-  aurora: {
-    t1: ['#5b21b6','#7c3aed','#a78bfa','#059669','#0ea5e9','#ec4899','#f59e0b','#64748b'],
-    t2: ['#059669','#0d9488','#34d399','#6366f1','#0ea5e9','#ec4899','#f59e0b','#64748b'],
-    t3: ['#e84226','#f97316','#fb923c','#059669','#0ea5e9','#8b5cf6','#ec4899','#64748b'],
-    t4: ['#9333ea','#c026d3','#d946ef','#059669','#0ea5e9','#f43f5e','#f59e0b','#64748b'],
-    t5: ['#0284c7','#0ea5e9','#38bdf8','#059669','#6366f1','#ec4899','#f59e0b','#64748b'],
-  },
-  carbon: {
-    t1: ['#f59e0b','#fbbf24','#fcd34d','#4ade80','#38bdf8','#f87171','#c084fc','#94a3b8'],
-    t2: ['#22d3ee','#38bdf8','#7dd3fc','#4ade80','#f59e0b','#f87171','#c084fc','#94a3b8'],
-    t3: ['#84cc16','#a3e635','#bef264','#22d3ee','#f59e0b','#f87171','#c084fc','#94a3b8'],
-    t4: ['#ec4899','#f472b6','#fbcfe8','#4ade80','#38bdf8','#f59e0b','#c084fc','#94a3b8'],
-    t5: ['#f97316','#fb923c','#fdba74','#4ade80','#22d3ee','#f43f5e','#c084fc','#94a3b8'],
-  },
-  prism: {
-    t1: ['#1c2a8c','#3b4ec8','#6b7dff','#166534','#0284c7','#7c2d12','#78350f','#374151'],
-    t2: ['#991b1b','#dc2626','#ef4444','#166534','#1c2a8c','#92400e','#6d28d9','#374151'],
-    t3: ['#14532d','#166534','#16a34a','#1c2a8c','#0284c7','#991b1b','#92400e','#374151'],
-    t4: ['#a16207','#ca8a04','#eab308','#166534','#1c2a8c','#991b1b','#6d28d9','#374151'],
-    t5: ['#0f172a','#1e293b','#334155','#166534','#1c2a8c','#991b1b','#92400e','#374151'],
-  },
-  pulse: {
-    t1: ['#27e0a3','#1fb88a','#8b7bff','#ff627e','#2bb8ff','#ffb84d','#0b1d2d','#12283d'],
-    t2: ['#2bb8ff','#1a9de0','#8b7bff','#ff627e','#27e0a3','#ffb84d','#0b1d2d','#12283d'],
-    t3: ['#8b7bff','#6b5be0','#27e0a3','#ff627e','#2bb8ff','#ffb84d','#0b1d2d','#12283d'],
-    t4: ['#ff627e','#e04060','#27e0a3','#8b7bff','#2bb8ff','#ffb84d','#0b1d2d','#12283d'],
-    t5: ['#ffb84d','#e09830','#27e0a3','#ff627e','#2bb8ff','#8b7bff','#0b1d2d','#12283d'],
-  },
-};
-
-const FONTS = ['Inter','JetBrains Mono','Space Grotesk','Sora','Plus Jakarta Sans','DM Sans','Outfit','Fira Code','IBM Plex Mono','Roboto'];
-const FONT_SIZES = [9,10,11,12,13,14];
-const VISION_PROFILES = ['standard','comfortable','compact','large'];
-
-interface SettingsDraft {
-  layout: string;
-  theme: string;
-  lowStockThreshold: number;
-  priceAlertThreshold: number;
-  allowInvalidTrades: boolean;
-  ledgerFont: string;
-  ledgerFontSize: number;
-  fontVisionProfile: string;
-  autoFontDisable: boolean;
-  autoBackup: boolean;
-  logsEnabled: boolean;
-  logLevel: string;
-}
-
-function loadSettings(): SettingsDraft {
-  try {
-    const raw = localStorage.getItem('tracker_settings');
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return {
-    layout: 'flux', theme: 't1',
-    lowStockThreshold: 5000, priceAlertThreshold: 2,
-    allowInvalidTrades: true,
-    ledgerFont: 'Inter', ledgerFontSize: 11,
-    fontVisionProfile: 'standard', autoFontDisable: false,
-    autoBackup: false, logsEnabled: true, logLevel: 'info',
-  };
-}
+import {
+  useTheme,
+  LAYOUTS,
+  THEME_COLORS,
+  THEME_NAMES,
+  FONTS,
+  FONT_SIZES,
+  VISION_PROFILES,
+} from '@/lib/theme-context';
 
 export default function SettingsPage() {
-  const [saved, setSaved] = useState<SettingsDraft>(loadSettings);
-  const [draft, setDraft] = useState<SettingsDraft>(loadSettings);
-  const [dirty, setDirty] = useState(false);
+  const {
+    settings: draft,
+    update,
+    save,
+    discard,
+    isDirty: dirty,
+    currentLayout,
+    logs,
+    clearLogs,
+    downloadLogs,
+  } = useTheme();
 
-  const update = useCallback((patch: Partial<SettingsDraft>) => {
-    setDraft(prev => ({ ...prev, ...patch }));
-    setDirty(true);
-  }, []);
-
-  const commitSettings = useCallback(() => {
-    localStorage.setItem('tracker_settings', JSON.stringify(draft));
-    setSaved(draft);
-    setDirty(false);
+  const commitSettings = () => {
+    save();
     toast.success('Settings saved');
-  }, [draft]);
+  };
 
-  const discardSettings = useCallback(() => {
-    setDraft(saved);
-    setDirty(false);
+  const discardSettings = () => {
+    discard();
     toast('Discarded pending changes');
-  }, [saved]);
+  };
 
   const curThemeColors = THEME_COLORS[draft.layout] || THEME_COLORS.flux;
 
@@ -143,7 +61,7 @@ export default function SettingsPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-display">🎨 Layout Templates</CardTitle>
-              <Badge variant="outline" className="text-xs">{LAYOUTS.find(l => l.id === draft.layout)?.name || draft.layout} · {LAYOUTS.find(l => l.id === draft.layout)?.font}</Badge>
+              <Badge variant="outline" className="text-xs">{currentLayout.name} · {currentLayout.font}</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -175,7 +93,7 @@ export default function SettingsPage() {
 
             {/* Theme Colors */}
             <div>
-              <Label className="text-xs mb-2 block">Color Themes for {LAYOUTS.find(l => l.id === draft.layout)?.name}</Label>
+              <Label className="text-xs mb-2 block">Color Themes for {currentLayout.name}</Label>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {Object.entries(curThemeColors).map(([tid, colors]) => (
                   <button
@@ -297,6 +215,9 @@ export default function SettingsPage() {
                   <Label className="text-xs">Auto-adjust font for screen size</Label>
                   <Switch checked={!draft.autoFontDisable} onCheckedChange={v => update({ autoFontDisable: !v })} />
                 </div>
+                <p className="text-[9px] text-muted-foreground mt-2">
+                  Effective size: {Math.round(draft.ledgerFontSize * (draft.autoFontDisable ? 1 : ({'standard':1,'comfortable':1.1,'compact':0.9,'large':1.25} as Record<string,number>)[draft.fontVisionProfile] || 1))}px (viewport {typeof window !== 'undefined' ? window.innerWidth : '?'}px)
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -304,7 +225,10 @@ export default function SettingsPage() {
           {/* ── Logs ── */}
           <Card className="glass">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-display">📋 Logs</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-display">📋 Logs</CardTitle>
+                <Badge variant="outline" className="text-[10px]">{logs.length}</Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -314,7 +238,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label className="text-xs">Level</Label>
                 <div className="flex gap-1.5">
-                  {['error','warn','info'].map(lvl => (
+                  {(['error','warn','info'] as const).map(lvl => (
                     <button
                       key={lvl}
                       onClick={() => update({ logLevel: lvl })}
@@ -329,12 +253,38 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => toast('Logs modal — coming soon')}>Open</Button>
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => toast('Download — coming soon')}>Download</Button>
-                <Button variant="destructive" size="sm" className="text-xs" onClick={() => toast('Logs cleared')}>Clear</Button>
+                <Button variant="outline" size="sm" className="text-xs" onClick={downloadLogs}>
+                  <Download className="w-3 h-3 mr-1" /> Download
+                </Button>
+                <Button variant="destructive" size="sm" className="text-xs" onClick={() => { clearLogs(); toast('Logs cleared'); }}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Clear
+                </Button>
               </div>
+
+              {/* Live log tail */}
+              {logs.length > 0 && (
+                <ScrollArea className="h-40 border rounded-md p-2">
+                  {logs.slice(0, 50).map(entry => (
+                    <div key={entry.id} className="flex gap-2 items-start py-0.5 border-b border-border/30 last:border-0">
+                      <span className={cn(
+                        'text-[9px] font-mono shrink-0 w-10 text-center rounded px-1',
+                        entry.level === 'error' ? 'text-destructive bg-destructive/10' :
+                        entry.level === 'warn' ? 'text-warning bg-warning/10' :
+                        'text-muted-foreground bg-muted'
+                      )}>
+                        {entry.level}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground shrink-0">
+                        {new Date(entry.ts).toLocaleTimeString()}
+                      </span>
+                      <span className="text-[10px] truncate">{entry.message}</span>
+                    </div>
+                  ))}
+                </ScrollArea>
+              )}
+
               <p className="text-[10px] text-muted-foreground">
-                Client-side logs stored in this browser. Server Drive folder logs are separate.
+                Client-side logs stored in this browser. Max 500 entries.
               </p>
             </CardContent>
           </Card>
