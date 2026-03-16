@@ -400,7 +400,31 @@ export const LAYOUTS: LayoutDef[] = [FLUX, CIPHER, AURORA, CARBON, PRISM, PULSE]
 export const THEME_NAMES: Record<string, string> = { t1: 'Theme 1', t2: 'Theme 2', t3: 'Theme 3', t4: 'Theme 4', t5: 'Theme 5' };
 export const FONTS = ['Inter','JetBrains Mono','Space Grotesk','Sora','Plus Jakarta Sans','DM Sans','Outfit','Fira Code','IBM Plex Mono','Roboto'];
 export const FONT_SIZES = [9,10,11,12,13,14];
-export const VISION_PROFILES = ['standard','comfortable','compact','large'] as const;
+export const VISION_PROFILES = ['standard','large','xlarge','compact'] as const;
+
+// ── FONT_CONFIG — exact match from TRACKER_CLOUDFLARE- repo ──
+export const FONT_CONFIG = {
+  baseSize: 11, minSize: 9, maxSize: 18,
+  breakpoints: { mobile: 480, tablet: 900, desktop: 1366, wide: 1920 },
+  scaleFactors: { mobile: 0.9, tablet: 1.0, desktop: 1.05, wide: 1.1 },
+  visionProfiles: { standard: 1.0, large: 1.15, xlarge: 1.3, compact: 0.9 } as Record<string, number>,
+};
+
+export function detectOptimalFontSize(baseSize: number, visionProfile: string): number {
+  const width = typeof window !== 'undefined' ? window.innerWidth : 1366;
+  const base = Number(baseSize || FONT_CONFIG.baseSize) || FONT_CONFIG.baseSize;
+
+  let scale = 1.0;
+  if (width < FONT_CONFIG.breakpoints.mobile) scale = FONT_CONFIG.scaleFactors.mobile;
+  else if (width < FONT_CONFIG.breakpoints.tablet) scale = FONT_CONFIG.scaleFactors.tablet;
+  else if (width < FONT_CONFIG.breakpoints.desktop) scale = FONT_CONFIG.scaleFactors.desktop;
+  else scale = FONT_CONFIG.scaleFactors.wide;
+
+  const vm = FONT_CONFIG.visionProfiles[String(visionProfile || 'standard')] || 1.0;
+  let finalSize = Math.round(base * scale * vm);
+  finalSize = Math.max(FONT_CONFIG.minSize, Math.min(FONT_CONFIG.maxSize, finalSize));
+  return finalSize;
+}
 
 // ── Settings shape ──
 export interface AppSettings {
