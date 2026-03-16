@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
-import { deals as dealsApi } from '@/lib/api';
-import { getDemoMode } from '@/lib/demo-mode';
-import { getDemoDeals } from '@/lib/network-demo-data';
+import { useState, useEffect, useCallback } from 'react';
+import * as engine from '@/lib/backend-engine';
+import { subscribe } from '@/lib/backend-store';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Briefcase } from 'lucide-react';
-import { toast } from 'sonner';
+import { Briefcase } from 'lucide-react';
 import type { MerchantDeal } from '@/types/domain';
 
 const statusColors: Record<string, string> = {
@@ -21,31 +19,23 @@ const statusColors: Record<string, string> = {
 
 export default function DealsPage() {
   const [allDeals, setAllDeals] = useState<MerchantDeal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setTick] = useState(0);
+
+  const reload = useCallback(() => {
+    setAllDeals(engine.getDeals());
+    setTick(t => t + 1);
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        if (getDemoMode()) {
-          setAllDeals(getDemoDeals());
-        } else {
-          const { deals: d } = await dealsApi.list();
-          setAllDeals(d);
-        }
-      } catch (err: any) {
-        toast.error(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    reload();
+    return subscribe(reload);
+  }, [reload]);
 
   return (
     <div>
       <PageHeader title="Deals" description="All deals across relationships" />
       <div className="p-6 space-y-3">
-        {loading && <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>}
-        {!loading && allDeals.length === 0 && (
+        {allDeals.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No deals yet</p>

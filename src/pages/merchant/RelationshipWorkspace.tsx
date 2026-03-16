@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { relationships as relApi, messages as msgApi, deals as dealsApi, approvals as approvalsApi, audit as auditApi } from '@/lib/api';
-import { getDemoMode, DEMO_USER } from '@/lib/demo-mode';
-import { DEMO_RELATIONSHIPS, getDemoDeals, getDemoMessages, DEMO_APPROVALS_INBOX, DEMO_APPROVALS_SENT } from '@/lib/network-demo-data';
+import * as engine from '@/lib/backend-engine';
+import { subscribe } from '@/lib/backend-store';
 import { useAuth } from '@/lib/auth-context';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatCard } from '@/components/layout/StatCard';
@@ -10,10 +9,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Send, Users, Briefcase, DollarSign, CheckSquare, Shield, MessageSquare, Check, X } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Loader2, Send, Users, Briefcase, DollarSign, CheckSquare, Shield, MessageSquare, Check, X, Plus, ArrowRight, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MerchantRelationship, MerchantMessage, MerchantDeal, MerchantApproval, AuditLog } from '@/types/domain';
+
+const dealStatusColors: Record<string, string> = {
+  draft: 'bg-muted text-muted-foreground',
+  active: 'bg-success text-success-foreground',
+  due: 'bg-warning text-warning-foreground',
+  settled: 'bg-primary text-primary-foreground',
+  closed: 'bg-secondary text-secondary-foreground',
+  overdue: 'bg-destructive text-destructive-foreground',
+  cancelled: 'bg-muted text-muted-foreground',
+};
+const approvalStatusColors: Record<string, string> = {
+  pending: 'bg-warning text-warning-foreground',
+  approved: 'bg-success text-success-foreground',
+  rejected: 'bg-destructive text-destructive-foreground',
+};
 
 export default function RelationshipWorkspace() {
   const { id } = useParams<{ id: string }>();
@@ -24,116 +44,117 @@ export default function RelationshipWorkspace() {
   const [relApprovals, setRelApprovals] = useState<MerchantApproval[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [msgInput, setMsgInput] = useState('');
-  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Dialogs
+  const [createDealOpen, setCreateDealOpen] = useState(false);
+  const [dealForm, setDealForm] = useState({ title: '', deal_type: 'lending', amount: '', due_date: '', expected_return: '' });
+  const [settlementOpen, setSettlementOpen] = useState(false);
+  const [settleDealId, setSettleDealId] = useState('');
+  const [settlementForm, setSettlementForm] = useState({ amount: '', note: '' });
+  const [profitOpen, setProfitOpen] = useState(false);
+  const [profitDealId, setProfitDealId] = useState('');
+  const [profitForm, setProfitForm] = useState({ amount: '', period_key: '', note: '' });
+
+  const reload = useCallback(() => {
     if (!id) return;
-    (async () => {
-      try {
-        if (getDemoMode()) {
-          const demoRel = DEMO_RELATIONSHIPS.find(r => r.id === id) || null;
-          setRel(demoRel);
-          setMsgs(getDemoMessages(id));
-          setRelDeals(getDemoDeals(id));
-          const allApprovals = [...DEMO_APPROVALS_INBOX, ...DEMO_APPROVALS_SENT].filter(a => a.relationship_id === id);
-          setRelApprovals(allApprovals);
-        } else {
-          const [r, m, d] = await Promise.all([
-            relApi.get(id),
-            msgApi.list(id),
-            dealsApi.list(id),
-          ]);
-          setRel(r.relationship);
-          setMsgs(m.messages);
-          setRelDeals(d.deals);
-        }
-      } catch (err: any) {
-        toast.error(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    const r = engine.getRelationship(id);
+    setRel(r);
+    setMsgs(engine.getMessages(id));
+    setRelDeals(engine.getDeals(id));
+    const allApr = [...engine.getApprovalsInbox(), ...engine.getApprovalsSent()].filter(a => a.relationship_id === id);
+    setRelApprovals(allApr);
+    setAuditLogs(engine.getAuditLogs(id));
   }, [id]);
 
-  // Scroll to bottom when messages change
+  useEffect(() => {
+    reload();
+    return subscribe(reload);
+  }, [reload]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs]);
 
-  const sendMessage = async () => {
+  const sendMsg = () => {
     if (!msgInput.trim() || !id) return;
-    try {
-      if (getDemoMode()) {
-        const newMsg: MerchantMessage = {
-          id: `msg-${Date.now()}`,
-          relationship_id: id,
-          sender_user_id: DEMO_USER.user_id,
-          sender_merchant_id: 'demo-merchant-001',
-          body: msgInput.trim(),
-          message_type: 'text',
-          metadata: {},
-          is_read: true,
-          created_at: new Date().toISOString(),
-          sender_name: 'Demo Trader',
-        };
-        setMsgs(prev => [...prev, newMsg]);
-        setMsgInput('');
-        return;
-      }
-      const { message } = await msgApi.send(id, msgInput.trim());
-      setMsgs(prev => [...prev, message]);
-      setMsgInput('');
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    engine.sendMessage(id, msgInput.trim());
+    setMsgInput('');
   };
 
-  const handleApproveLocal = async (approvalId: string) => {
-    if (getDemoMode()) {
-      setRelApprovals(prev => prev.map(a => a.id === approvalId ? { ...a, status: 'approved' as const } : a));
-      toast.success('Approved');
-      return;
-    }
+  const handleCreateDeal = () => {
+    if (!id || !dealForm.title || !dealForm.amount) return;
     try {
-      await approvalsApi.approve(approvalId);
-      toast.success('Approved');
+      const deal = engine.createDeal({
+        relationship_id: id, deal_type: dealForm.deal_type, title: dealForm.title,
+        amount: parseFloat(dealForm.amount), due_date: dealForm.due_date || undefined,
+        expected_return: dealForm.expected_return ? parseFloat(dealForm.expected_return) : undefined,
+      });
+      toast.success(`Deal "${deal.title}" created`);
+      setCreateDealOpen(false);
+      setDealForm({ title: '', deal_type: 'lending', amount: '', due_date: '', expected_return: '' });
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleRejectLocal = async (approvalId: string) => {
-    if (getDemoMode()) {
-      setRelApprovals(prev => prev.map(a => a.id === approvalId ? { ...a, status: 'rejected' as const } : a));
-      toast.success('Rejected');
-      return;
-    }
+  const handleActivateDeal = (dealId: string) => {
+    try { engine.activateDeal(dealId); toast.success('Deal activated'); }
+    catch (err: any) { toast.error(err.message); }
+  };
+
+  const openSettlement = (dealId: string) => {
+    setSettleDealId(dealId);
+    setSettlementForm({ amount: '', note: '' });
+    setSettlementOpen(true);
+  };
+
+  const handleSubmitSettlement = () => {
+    if (!settlementForm.amount) return;
     try {
-      await approvalsApi.reject(approvalId);
-      toast.success('Rejected');
+      engine.submitSettlement(settleDealId, {
+        amount: parseFloat(settlementForm.amount), note: settlementForm.note,
+      });
+      toast.success('Settlement submitted for approval');
+      setSettlementOpen(false);
     } catch (err: any) { toast.error(err.message); }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-64"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  const openProfit = (dealId: string) => {
+    setProfitDealId(dealId);
+    setProfitForm({ amount: '', period_key: new Date().toISOString().substring(0, 7), note: '' });
+    setProfitOpen(true);
+  };
+
+  const handleRecordProfit = () => {
+    if (!profitForm.amount) return;
+    try {
+      engine.recordProfit(profitDealId, {
+        amount: parseFloat(profitForm.amount), period_key: profitForm.period_key, note: profitForm.note,
+      });
+      toast.success('Profit recorded — pending approval');
+      setProfitOpen(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleCloseDeal = (dealId: string) => {
+    try { engine.requestDealClose(dealId); toast.success('Close request submitted'); }
+    catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleApprove = (approvalId: string) => {
+    try { engine.approveRequest(approvalId); toast.success('Approved — business data mutated'); }
+    catch (err: any) { toast.error(err.message); }
+  };
+  const handleReject = (approvalId: string) => {
+    try { engine.rejectRequest(approvalId); toast.success('Rejected — no mutation'); }
+    catch (err: any) { toast.error(err.message); }
+  };
+
   if (!rel) return <div className="p-6 text-center text-muted-foreground">Relationship not found</div>;
 
   const statusColors: Record<string, string> = {
     active: 'bg-success text-success-foreground',
     restricted: 'bg-warning text-warning-foreground',
     suspended: 'bg-destructive text-destructive-foreground',
-  };
-
-  const approvalStatusColors: Record<string, string> = {
-    pending: 'bg-warning text-warning-foreground',
-    approved: 'bg-success text-success-foreground',
-    rejected: 'bg-destructive text-destructive-foreground',
-  };
-
-  const dealStatusColors: Record<string, string> = {
-    active: 'bg-success text-success-foreground',
-    due: 'bg-warning text-warning-foreground',
-    settled: 'bg-primary text-primary-foreground',
-    closed: 'bg-secondary text-secondary-foreground',
-    overdue: 'bg-destructive text-destructive-foreground',
   };
 
   return (
@@ -143,7 +164,6 @@ export default function RelationshipWorkspace() {
       </PageHeader>
 
       <div className="p-6 space-y-6">
-        {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total Deals" value={rel.summary?.totalDeals || 0} icon={Briefcase} />
           <StatCard label="Active Exposure" value={`$${(rel.summary?.activeExposure || 0).toLocaleString()}`} icon={DollarSign} />
@@ -151,23 +171,16 @@ export default function RelationshipWorkspace() {
           <StatCard label="Pending Approvals" value={rel.summary?.pendingApprovals || 0} icon={CheckSquare} />
         </div>
 
-        {/* Workspace Tabs */}
         <Tabs defaultValue="messages">
           <TabsList className="grid grid-cols-5 w-full">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="messages">
-              Messages
-              {msgs.filter(m => !m.is_read && m.sender_user_id !== userId).length > 0 && (
-                <Badge className="ml-1.5 bg-primary text-primary-foreground text-[10px] px-1.5 py-0">
-                  {msgs.filter(m => !m.is_read && m.sender_user_id !== userId).length}
-                </Badge>
-              )}
-            </TabsTrigger>
+            <TabsTrigger value="messages">Messages {msgs.filter(m => !m.is_read && m.sender_user_id !== userId).length > 0 && <Badge className="ml-1.5 bg-primary text-primary-foreground text-[10px] px-1.5 py-0">{msgs.filter(m => !m.is_read && m.sender_user_id !== userId).length}</Badge>}</TabsTrigger>
             <TabsTrigger value="deals">Deals ({relDeals.length})</TabsTrigger>
             <TabsTrigger value="approvals">Approvals ({relApprovals.filter(a => a.status === 'pending').length})</TabsTrigger>
-            <TabsTrigger value="audit">Audit</TabsTrigger>
+            <TabsTrigger value="audit">Audit ({auditLogs.length})</TabsTrigger>
           </TabsList>
 
+          {/* OVERVIEW */}
           <TabsContent value="overview" className="mt-4">
             <Card className="glass">
               <CardHeader><CardTitle className="text-sm font-display">Relationship Details</CardTitle></CardHeader>
@@ -176,7 +189,6 @@ export default function RelationshipWorkspace() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Your Role</span><span className="capitalize">{rel.my_role}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Shared Fields</span><span>{rel.shared_fields?.join(', ') || 'All'}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span>{new Date(rel.created_at).toLocaleDateString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Last Updated</span><span>{new Date(rel.updated_at).toLocaleDateString()}</span></div>
                 {rel.approval_policy && (
                   <>
                     <div className="border-t border-border pt-2 mt-2">
@@ -194,19 +206,17 @@ export default function RelationshipWorkspace() {
             </Card>
           </TabsContent>
 
+          {/* MESSAGES */}
           <TabsContent value="messages" className="mt-4">
             <Card className="glass">
               <CardContent className="p-0">
                 <div className="h-80 overflow-y-auto p-4 space-y-3">
-                  {msgs.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">No messages yet — start the conversation!</p>}
+                  {msgs.length === 0 && <p className="text-center text-muted-foreground text-sm py-8">No messages yet</p>}
                   {msgs.map(msg => (
                     <div key={msg.id} className={`flex ${msg.message_type === 'system' ? 'justify-center' : msg.sender_user_id === userId ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
-                        msg.message_type === 'system'
-                          ? 'bg-muted text-muted-foreground text-center w-full text-xs italic'
-                          : msg.sender_user_id === userId
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-secondary text-secondary-foreground'
+                        msg.message_type === 'system' ? 'bg-muted text-muted-foreground text-center w-full text-xs italic'
+                          : msg.sender_user_id === userId ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
                       }`}>
                         {msg.message_type !== 'system' && <p className="text-[10px] font-mono opacity-70 mb-0.5">{msg.sender_name || msg.sender_merchant_id}</p>}
                         <p>{msg.body}</p>
@@ -217,20 +227,19 @@ export default function RelationshipWorkspace() {
                   <div ref={messagesEndRef} />
                 </div>
                 <div className="border-t p-3 flex gap-2">
-                  <Input
-                    placeholder="Type a message..."
-                    value={msgInput}
-                    onChange={e => setMsgInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                  />
-                  <Button onClick={sendMessage} size="icon"><Send className="w-4 h-4" /></Button>
+                  <Input placeholder="Type a message..." value={msgInput} onChange={e => setMsgInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMsg()} />
+                  <Button onClick={sendMsg} size="icon"><Send className="w-4 h-4" /></Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* DEALS */}
           <TabsContent value="deals" className="mt-4 space-y-3">
-            {relDeals.length === 0 && <p className="text-center text-muted-foreground py-8">No deals in this relationship</p>}
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setCreateDealOpen(true)} className="gap-1"><Plus className="w-3.5 h-3.5" /> New Deal</Button>
+            </div>
+            {relDeals.length === 0 && <p className="text-center text-muted-foreground py-8">No deals yet — create one above</p>}
             {relDeals.map(deal => (
               <Card key={deal.id} className="glass">
                 <CardContent className="p-4">
@@ -248,9 +257,29 @@ export default function RelationshipWorkspace() {
                         {deal.realized_pnl != null && <span className="text-success">P&L: ${deal.realized_pnl.toLocaleString()}</span>}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-1">
                       <p className="font-display font-bold text-lg">${deal.amount.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">{deal.currency}</p>
+                      <div className="flex gap-1 justify-end flex-wrap">
+                        {deal.status === 'draft' && (
+                          <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleActivateDeal(deal.id)}>
+                            <ArrowRight className="w-3 h-3 mr-1" /> Activate
+                          </Button>
+                        )}
+                        {['active', 'due', 'overdue'].includes(deal.status) && (
+                          <>
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openSettlement(deal.id)}>
+                              <DollarSign className="w-3 h-3 mr-1" /> Settle
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openProfit(deal.id)}>
+                              <Plus className="w-3 h-3 mr-1" /> Profit
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleCloseDeal(deal.id)}>
+                              <Lock className="w-3 h-3 mr-1" /> Close
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -258,8 +287,9 @@ export default function RelationshipWorkspace() {
             ))}
           </TabsContent>
 
+          {/* APPROVALS */}
           <TabsContent value="approvals" className="mt-4 space-y-3">
-            {relApprovals.length === 0 && <p className="text-center text-muted-foreground py-8">No approvals for this relationship</p>}
+            {relApprovals.length === 0 && <p className="text-center text-muted-foreground py-8">No approvals</p>}
             {relApprovals.map(a => (
               <Card key={a.id} className="glass">
                 <CardContent className="flex items-center justify-between p-4">
@@ -269,7 +299,7 @@ export default function RelationshipWorkspace() {
                       <Badge className={approvalStatusColors[a.status] || 'bg-muted text-muted-foreground'}>{a.status}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Target: {a.target_entity_type} • Submitted: {new Date(a.submitted_at).toLocaleDateString()}
+                      {new Date(a.submitted_at).toLocaleDateString()}
                       {a.resolution_note && ` • ${a.resolution_note}`}
                     </p>
                     {a.proposed_payload && Object.keys(a.proposed_payload).length > 0 && (
@@ -282,8 +312,8 @@ export default function RelationshipWorkspace() {
                   </div>
                   {a.status === 'pending' && a.reviewer_user_id === userId && (
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => handleApproveLocal(a.id)} className="gap-1"><Check className="w-3.5 h-3.5" /> Approve</Button>
-                      <Button size="sm" variant="outline" onClick={() => handleRejectLocal(a.id)} className="gap-1"><X className="w-3.5 h-3.5" /> Reject</Button>
+                      <Button size="sm" onClick={() => handleApprove(a.id)} className="gap-1"><Check className="w-3.5 h-3.5" /> Approve</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleReject(a.id)} className="gap-1"><X className="w-3.5 h-3.5" /> Reject</Button>
                     </div>
                   )}
                 </CardContent>
@@ -291,17 +321,129 @@ export default function RelationshipWorkspace() {
             ))}
           </TabsContent>
 
-          <TabsContent value="audit" className="mt-4">
-            <Card className="glass">
-              <CardContent className="py-8 text-center text-muted-foreground">
-                <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>Audit trail will populate as actions are performed.</p>
-                <p className="text-xs mt-1">All deal changes, settlements, approvals, and messages are logged.</p>
-              </CardContent>
-            </Card>
+          {/* AUDIT */}
+          <TabsContent value="audit" className="mt-4 space-y-2">
+            {auditLogs.length === 0 && (
+              <Card className="glass"><CardContent className="py-8 text-center text-muted-foreground">
+                <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" /><p>No audit events yet</p>
+              </CardContent></Card>
+            )}
+            {auditLogs.map(log => (
+              <Card key={log.id} className="glass">
+                <CardContent className="flex items-center gap-3 p-3">
+                  <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{log.action.replace(/_/g, ' ')}</span>
+                      <Badge variant="outline" className="text-[10px] font-mono">{log.entity_type}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString()}</p>
+                    {log.detail_json && Object.keys(log.detail_json).length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {Object.entries(log.detail_json).map(([k, v]) => `${k}: ${v}`).join(' • ')}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Deal Dialog */}
+      <Dialog open={createDealOpen} onOpenChange={setCreateDealOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Create New Deal</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input placeholder="e.g. Working Capital Facility" value={dealForm.title} onChange={e => setDealForm(f => ({ ...f, title: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={dealForm.deal_type} onValueChange={v => setDealForm(f => ({ ...f, deal_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lending">Lending</SelectItem>
+                    <SelectItem value="arbitrage">Arbitrage</SelectItem>
+                    <SelectItem value="partnership">Partnership</SelectItem>
+                    <SelectItem value="capital_placement">Capital Placement</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Amount (USDT)</Label>
+                <Input type="number" placeholder="10000" value={dealForm.amount} onChange={e => setDealForm(f => ({ ...f, amount: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Due Date (optional)</Label>
+                <Input type="date" value={dealForm.due_date} onChange={e => setDealForm(f => ({ ...f, due_date: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Expected Return</Label>
+                <Input type="number" placeholder="500" value={dealForm.expected_return} onChange={e => setDealForm(f => ({ ...f, expected_return: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDealOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateDeal}>Create Deal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settlement Dialog */}
+      <Dialog open={settlementOpen} onOpenChange={setSettlementOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Submit Settlement</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Amount (USDT)</Label>
+              <Input type="number" placeholder="10150" value={settlementForm.amount} onChange={e => setSettlementForm(f => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Note (optional)</Label>
+              <Textarea placeholder="Principal + return" value={settlementForm.note} onChange={e => setSettlementForm(f => ({ ...f, note: e.target.value }))} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettlementOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitSettlement}>Submit for Approval</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Profit Recording Dialog */}
+      <Dialog open={profitOpen} onOpenChange={setProfitOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Record Profit</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amount (USDT)</Label>
+                <Input type="number" placeholder="500" value={profitForm.amount} onChange={e => setProfitForm(f => ({ ...f, amount: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Period</Label>
+                <Input type="month" value={profitForm.period_key} onChange={e => setProfitForm(f => ({ ...f, period_key: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Note (optional)</Label>
+              <Textarea placeholder="Monthly profit share" value={profitForm.note} onChange={e => setProfitForm(f => ({ ...f, note: e.target.value }))} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfitOpen(false)}>Cancel</Button>
+            <Button onClick={handleRecordProfit}>Submit for Approval</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,15 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getDemoMode } from '@/lib/demo-mode';
-import { DEMO_RELATIONSHIPS, DEMO_MESSAGES } from '@/lib/network-demo-data';
-import { relationships as relApi, messages as msgApi } from '@/lib/api';
+import * as engine from '@/lib/backend-engine';
+import { subscribe } from '@/lib/backend-store';
 import { useAuth } from '@/lib/auth-context';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MessageSquare, Users, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
-import type { MerchantRelationship, MerchantMessage } from '@/types/domain';
+import type { MerchantMessage } from '@/types/domain';
 
 interface ConversationSummary {
   relationshipId: string;
@@ -23,73 +21,35 @@ interface ConversationSummary {
 export default function MessagesPage() {
   const { userId } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setTick] = useState(0);
+
+  const reload = useCallback(() => {
+    const rels = engine.getRelationships();
+    const convos: ConversationSummary[] = rels.map(rel => {
+      const msgs = engine.getMessages(rel.id);
+      const unread = msgs.filter(m => !m.is_read && m.sender_user_id !== userId).length;
+      return {
+        relationshipId: rel.id,
+        counterpartyName: rel.counterparty?.display_name || 'Unknown',
+        counterpartyMerchantId: rel.counterparty?.merchant_id || '',
+        status: rel.status,
+        lastMessage: msgs.length > 0 ? msgs[msgs.length - 1] : null,
+        unreadCount: unread,
+      };
+    });
+    convos.sort((a, b) => {
+      const ta = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
+      const tb = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
+      return tb - ta;
+    });
+    setConversations(convos);
+    setTick(t => t + 1);
+  }, [userId]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        if (getDemoMode()) {
-          const convos: ConversationSummary[] = DEMO_RELATIONSHIPS.map(rel => {
-            const msgs = DEMO_MESSAGES[rel.id] || [];
-            const unread = msgs.filter(m => !m.is_read && m.sender_user_id !== userId).length;
-            return {
-              relationshipId: rel.id,
-              counterpartyName: rel.counterparty?.display_name || 'Unknown',
-              counterpartyMerchantId: rel.counterparty?.merchant_id || '',
-              status: rel.status,
-              lastMessage: msgs.length > 0 ? msgs[msgs.length - 1] : null,
-              unreadCount: unread,
-            };
-          });
-          // Sort by last message time, most recent first
-          convos.sort((a, b) => {
-            const ta = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-            const tb = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-            return tb - ta;
-          });
-          setConversations(convos);
-        } else {
-          // Load relationships and their latest messages
-          const { relationships } = await relApi.list();
-          const convos: ConversationSummary[] = await Promise.all(
-            relationships.map(async (rel) => {
-              try {
-                const { messages } = await msgApi.list(rel.id);
-                const unread = messages.filter(m => !m.is_read && m.sender_user_id !== userId).length;
-                return {
-                  relationshipId: rel.id,
-                  counterpartyName: rel.counterparty?.display_name || 'Unknown',
-                  counterpartyMerchantId: rel.counterparty?.merchant_id || '',
-                  status: rel.status,
-                  lastMessage: messages.length > 0 ? messages[messages.length - 1] : null,
-                  unreadCount: unread,
-                };
-              } catch {
-                return {
-                  relationshipId: rel.id,
-                  counterpartyName: rel.counterparty?.display_name || 'Unknown',
-                  counterpartyMerchantId: rel.counterparty?.merchant_id || '',
-                  status: rel.status,
-                  lastMessage: null,
-                  unreadCount: 0,
-                };
-              }
-            })
-          );
-          convos.sort((a, b) => {
-            const ta = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-            const tb = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-            return tb - ta;
-          });
-          setConversations(convos);
-        }
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to load messages');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [userId]);
+    reload();
+    return subscribe(reload);
+  }, [reload]);
 
   const totalUnread = useMemo(() => conversations.reduce((s, c) => s + c.unreadCount, 0), [conversations]);
 
@@ -97,16 +57,13 @@ export default function MessagesPage() {
     <div>
       <PageHeader title="Messages" description={`Messages across all relationships${totalUnread > 0 ? ` · ${totalUnread} unread` : ''}`} />
       <div className="p-6 space-y-3">
-        {loading && <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>}
-
-        {!loading && conversations.length === 0 && (
+        {conversations.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No conversations yet</p>
-            <p className="text-xs mt-1">Messages will appear here once you have active relationships.</p>
+            <p className="text-xs mt-1">Messages appear once you have active relationships.</p>
           </div>
         )}
-
         {conversations.map(convo => (
           <Link key={convo.relationshipId} to={`/network/relationships/${convo.relationshipId}`}>
             <Card className="glass hover:border-primary/50 transition-colors cursor-pointer">
@@ -119,18 +76,15 @@ export default function MessagesPage() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium truncate">{convo.counterpartyName}</p>
                       <Badge variant="outline" className="text-[10px] font-mono shrink-0">{convo.counterpartyMerchantId}</Badge>
-                      {convo.unreadCount > 0 && (
-                        <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 shrink-0">{convo.unreadCount}</Badge>
-                      )}
+                      {convo.unreadCount > 0 && <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 shrink-0">{convo.unreadCount}</Badge>}
                     </div>
-                    {convo.lastMessage && (
+                    {convo.lastMessage ? (
                       <p className="text-sm text-muted-foreground truncate mt-0.5">
                         {convo.lastMessage.message_type === 'system' ? '📋 ' : ''}
                         {convo.lastMessage.sender_user_id === userId ? 'You: ' : ''}
                         {convo.lastMessage.body}
                       </p>
-                    )}
-                    {!convo.lastMessage && (
+                    ) : (
                       <p className="text-sm text-muted-foreground italic mt-0.5">No messages yet</p>
                     )}
                   </div>
