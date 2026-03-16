@@ -430,6 +430,10 @@ export function detectOptimalFontSize(baseSize: number, visionProfile: string): 
 export interface AppSettings {
   layout: string;
   theme: string;
+  range: 'today' | '7d' | '30d' | 'all';
+  currency: 'QAR' | 'USDT';
+  language: 'en' | 'ar';
+  searchQuery: string;
   lowStockThreshold: number;
   priceAlertThreshold: number;
   allowInvalidTrades: boolean;
@@ -444,6 +448,7 @@ export interface AppSettings {
 
 const DEFAULT_SETTINGS: AppSettings = {
   layout: 'flux', theme: 't1',
+  range: '7d', currency: 'QAR', language: 'en', searchQuery: '',
   lowStockThreshold: 5000, priceAlertThreshold: 2,
   allowInvalidTrades: true,
   ledgerFont: 'Inter', ledgerFontSize: 11,
