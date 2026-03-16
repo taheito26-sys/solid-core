@@ -16,6 +16,8 @@ import {
   FONTS,
   FONT_SIZES,
   VISION_PROFILES,
+  FONT_CONFIG,
+  detectOptimalFontSize,
   type ThemeDef,
 } from '@/lib/theme-context';
 
@@ -222,7 +224,7 @@ export default function SettingsPage() {
                   <Switch checked={!draft.autoFontDisable} onCheckedChange={v => update({ autoFontDisable: !v })} />
                 </div>
                 <p className="text-[9px] text-muted-foreground mt-2">
-                  Effective size: {Math.round(draft.ledgerFontSize * (draft.autoFontDisable ? 1 : ({'standard':1,'comfortable':1.1,'compact':0.9,'large':1.25} as Record<string,number>)[draft.fontVisionProfile] || 1))}px (viewport {typeof window !== 'undefined' ? window.innerWidth : '?'}px)
+                  Auto size: <span className="font-mono">{detectOptimalFontSize(Number(draft.ledgerFontSize || FONT_CONFIG.baseSize), draft.fontVisionProfile)}px</span> (width {typeof window !== 'undefined' ? window.innerWidth : '?'}px)
                 </p>
               </div>
             </CardContent>

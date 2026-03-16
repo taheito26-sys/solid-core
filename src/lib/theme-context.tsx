@@ -400,7 +400,31 @@ export const LAYOUTS: LayoutDef[] = [FLUX, CIPHER, AURORA, CARBON, PRISM, PULSE]
 export const THEME_NAMES: Record<string, string> = { t1: 'Theme 1', t2: 'Theme 2', t3: 'Theme 3', t4: 'Theme 4', t5: 'Theme 5' };
 export const FONTS = ['Inter','JetBrains Mono','Space Grotesk','Sora','Plus Jakarta Sans','DM Sans','Outfit','Fira Code','IBM Plex Mono','Roboto'];
 export const FONT_SIZES = [9,10,11,12,13,14];
-export const VISION_PROFILES = ['standard','comfortable','compact','large'] as const;
+export const VISION_PROFILES = ['standard','large','xlarge','compact'] as const;
+
+// ── FONT_CONFIG — exact match from TRACKER_CLOUDFLARE- repo ──
+export const FONT_CONFIG = {
+  baseSize: 11, minSize: 9, maxSize: 18,
+  breakpoints: { mobile: 480, tablet: 900, desktop: 1366, wide: 1920 },
+  scaleFactors: { mobile: 0.9, tablet: 1.0, desktop: 1.05, wide: 1.1 },
+  visionProfiles: { standard: 1.0, large: 1.15, xlarge: 1.3, compact: 0.9 } as Record<string, number>,
+};
+
+export function detectOptimalFontSize(baseSize: number, visionProfile: string): number {
+  const width = typeof window !== 'undefined' ? window.innerWidth : 1366;
+  const base = Number(baseSize || FONT_CONFIG.baseSize) || FONT_CONFIG.baseSize;
+
+  let scale = 1.0;
+  if (width < FONT_CONFIG.breakpoints.mobile) scale = FONT_CONFIG.scaleFactors.mobile;
+  else if (width < FONT_CONFIG.breakpoints.tablet) scale = FONT_CONFIG.scaleFactors.tablet;
+  else if (width < FONT_CONFIG.breakpoints.desktop) scale = FONT_CONFIG.scaleFactors.desktop;
+  else scale = FONT_CONFIG.scaleFactors.wide;
+
+  const vm = FONT_CONFIG.visionProfiles[String(visionProfile || 'standard')] || 1.0;
+  let finalSize = Math.round(base * scale * vm);
+  finalSize = Math.max(FONT_CONFIG.minSize, Math.min(FONT_CONFIG.maxSize, finalSize));
+  return finalSize;
+}
 
 // ── Settings shape ──
 export interface AppSettings {
@@ -499,14 +523,7 @@ function loadLogs(): LogEntry[] {
   return [];
 }
 
-function visionMultiplier(profile: string): number {
-  switch (profile) {
-    case 'compact': return 0.9;
-    case 'comfortable': return 1.1;
-    case 'large': return 1.25;
-    default: return 1;
-  }
-}
+// visionMultiplier removed — now using detectOptimalFontSize from FONT_CONFIG
 
 function getTheme(layoutId: string, themeId: string): { layout: LayoutDef; theme: ThemeDef } {
   const layout = LAYOUTS.find(l => l.id === layoutId) || LAYOUTS[0];
@@ -634,15 +651,21 @@ function applyThemeToDOM(settings: AppSettings) {
   root.style.setProperty('--lt-font', `'${settings.ledgerFont}', sans-serif`);
   root.style.setProperty('--lt-font-mono', `'${layout.fontMono}', 'Fira Code', monospace`);
 
-  // Font size with vision profile
-  const mult = settings.autoFontDisable ? 1 : visionMultiplier(settings.fontVisionProfile);
-  const effectiveSize = Math.round(settings.ledgerFontSize * mult);
-  root.style.setProperty('--ledger-font-size', `${effectiveSize}px`);
-  root.style.setProperty('--ui-fs', `${effectiveSize}px`);
-  root.style.setProperty('--ui-scale', String((effectiveSize / 11).toFixed(4)));
+  // Font size — exact replica of detectOptimalFontSize_ from source repo
+  const base = Number(settings.ledgerFontSize || FONT_CONFIG.baseSize) || FONT_CONFIG.baseSize;
+  const computed = settings.autoFontDisable ? base : detectOptimalFontSize(base, settings.fontVisionProfile);
+  const lfsClamped = Math.max(FONT_CONFIG.minSize, Math.min(FONT_CONFIG.maxSize, computed));
+  const uiScale = Number((lfsClamped / FONT_CONFIG.baseSize).toFixed(4));
+  root.style.setProperty('--app-font', `'${settings.ledgerFont}', sans-serif`);
+  root.style.setProperty('--ui-fs', `${lfsClamped}px`);
+  root.style.setProperty('--ui-scale', String(uiScale));
+  root.style.setProperty('--ledger-font', `'${settings.ledgerFont}', sans-serif`);
+  root.style.setProperty('--ledger-fs', `${lfsClamped}px`);
+  root.style.setProperty('--ledger-font-size', `${lfsClamped}px`);
 
   // Global font application
   document.body.style.fontFamily = `'${settings.ledgerFont}', sans-serif`;
+  document.body.style.fontSize = `${lfsClamped}px`;
 }
 
 // ── Provider ──
@@ -681,6 +704,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyThemeToDOM(draft);
   }, [draft]);
+
+  // Auto-refresh font size on resize (matching source repo)
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        // Only re-apply if auto-font is enabled
+        if (!settingsRef.current.autoFontDisable) {
+          applyThemeToDOM(settingsRef.current);
+        }
+      }, 250);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (t) clearTimeout(t);
+    };
+  }, []);
 
   // Runtime error capture
   useEffect(() => {
