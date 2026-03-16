@@ -711,7 +711,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const update = useCallback((patch: Partial<AppSettings>) => {
-    const changed = Object.keys(patch).filter((key) => (draft as Record<string, unknown>)[key] !== (patch as Record<string, unknown>)[key]);
+    const changed = (Object.keys(patch) as (keyof AppSettings)[]).filter((key) => draft[key] !== patch[key]);
     if (changed.length === 0) return;
 
     setDraft(prev => ({ ...prev, ...patch }));
