@@ -96,23 +96,28 @@ export default function SettingsPage() {
             <div>
               <Label className="text-xs mb-2 block">Color Themes for {currentLayout.name}</Label>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {Object.entries(curThemeColors).map(([tid, colors]) => (
-                  <button
-                    key={tid}
-                    onClick={() => update({ theme: tid })}
-                    className={cn(
-                      'rounded-lg border p-2.5 transition-all hover:border-primary/50',
-                      draft.theme === tid ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border'
-                    )}
-                  >
-                    <div className="flex gap-0.5 mb-1.5">
-                      {colors.map((c, i) => (
-                        <div key={i} className="w-3 h-3 rounded-sm flex-1" style={{ background: c }} />
-                      ))}
-                    </div>
-                    <div className="text-[10px] text-center font-medium">{THEME_NAMES[tid] || tid}</div>
-                  </button>
-                ))}
+                {curThemeEntries.map(([tid, themeDef]) => {
+                  const swatchColors = [themeDef.brand, themeDef.brand2, themeDef.good, themeDef.bad, themeDef.warn, themeDef.muted];
+                  return (
+                    <button
+                      key={tid}
+                      onClick={() => update({ theme: tid })}
+                      className={cn(
+                        'rounded-lg border p-2.5 transition-all hover:border-primary/50',
+                        draft.theme === tid ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border'
+                      )}
+                    >
+                      <div className="flex gap-0.5 mb-1">
+                        <div className="w-5 h-5 rounded-sm border" style={{ background: themeDef.bg }} title="Background" />
+                        <div className="w-5 h-5 rounded-sm" style={{ background: themeDef.panel }} title="Panel" />
+                        {swatchColors.map((c, i) => (
+                          <div key={i} className="w-3 h-3 rounded-sm flex-1" style={{ background: c }} />
+                        ))}
+                      </div>
+                      <div className="text-[10px] text-center font-medium">{THEME_NAMES[tid] || tid}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
