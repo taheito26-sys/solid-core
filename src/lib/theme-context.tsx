@@ -581,7 +581,7 @@ function applyThemeToDOM(settings: AppSettings) {
   root.style.setProperty('--sidebar-primary-foreground', '0 0% 100%');
   root.style.setProperty('--sidebar-accent', sidebarDark ? hexToHSL(theme.panel2) : hexToHSL(theme.panel3));
   root.style.setProperty('--sidebar-accent-foreground', sidebarDark ? '210 40% 92%' : hexToHSL(theme.text));
-  root.style.setProperty('--sidebar-border', sidebarDark ? hexToHSL(theme.panel3) : hexToHSL(theme.panel3));
+  root.style.setProperty('--sidebar-border', hexToHSL(theme.panel3));
   root.style.setProperty('--sidebar-ring', hexToHSL(theme.brand));
 
   // Chart colors
@@ -591,10 +591,48 @@ function applyThemeToDOM(settings: AppSettings) {
   root.style.setProperty('--chart-4', hexToHSL(theme.brand2));
   root.style.setProperty('--chart-5', hexToHSL(theme.bad));
 
+  // Tracker palette (for tracker.css pages)
+  root.style.setProperty('--tracker-bg', theme.bg);
+  root.style.setProperty('--tracker-panel', theme.panel);
+  root.style.setProperty('--tracker-panel2', theme.panel2);
+  root.style.setProperty('--tracker-panel3', theme.panel3);
+  root.style.setProperty('--tracker-text', theme.text);
+  root.style.setProperty('--tracker-muted', theme.muted);
+  root.style.setProperty('--tracker-muted2', theme.muted2);
+  root.style.setProperty('--tracker-line', theme.line);
+  root.style.setProperty('--tracker-line2', theme.line2);
+  root.style.setProperty('--tracker-brand', theme.brand);
+  root.style.setProperty('--tracker-brand2', theme.brand2);
+  root.style.setProperty('--tracker-brand3', theme.brand3);
+  root.style.setProperty('--tracker-good', theme.good);
+  root.style.setProperty('--tracker-bad', theme.bad);
+  root.style.setProperty('--tracker-warn', theme.warn);
+  root.style.setProperty('--tracker-sidebar-bg', theme.sidebarBg);
+  root.style.setProperty('--tracker-topbar-bg', theme.topbarBg);
+  root.style.setProperty('--tracker-card-bg', theme.cardBg);
+  root.style.setProperty('--tracker-input-bg', theme.inputBg);
+  root.style.setProperty('--tracker-hover-card', theme.hoverCard);
+  root.style.setProperty('--tracker-glow', theme.glow);
+  root.style.setProperty('--tracker-kpi-accent', `linear-gradient(135deg, ${theme.brand}, ${theme.brand2})`);
+  root.style.setProperty('--tracker-t1', theme.brand);
+  root.style.setProperty('--tracker-t2', theme.brand2);
+  root.style.setProperty('--tracker-t3', theme.good);
+  root.style.setProperty('--tracker-t4', theme.bad);
+  root.style.setProperty('--tracker-t5', layout.themes.t5?.brand ?? theme.warn);
+
+  // Tracker layout geometry
+  root.style.setProperty('--lt-radius', layout.radius);
+  root.style.setProperty('--lt-radius-sm', layout.radiusSm);
+  root.style.setProperty('--lt-radius-lg', layout.radiusLg);
+  root.style.setProperty('--lt-shadow', layout.shadow);
+  root.style.setProperty('--lt-shadow2', dark ? '0 2px 8px rgba(0,0,0,.2)' : '0 2px 8px rgba(0,0,0,.08)');
+
   // Fonts
   root.style.setProperty('--font-display', `'${layout.font}', ${layout.font === layout.fontMono ? 'monospace' : 'sans-serif'}`);
   root.style.setProperty('--font-body', `'${layout.font}', sans-serif`);
   root.style.setProperty('--font-ledger', `'${settings.ledgerFont}', sans-serif`);
+  root.style.setProperty('--lt-font', `'${settings.ledgerFont}', sans-serif`);
+  root.style.setProperty('--lt-font-mono', `'${layout.fontMono}', 'Fira Code', monospace`);
 
   // Font size with vision profile
   const mult = settings.autoFontDisable ? 1 : visionMultiplier(settings.fontVisionProfile);
@@ -603,8 +641,8 @@ function applyThemeToDOM(settings: AppSettings) {
   root.style.setProperty('--ui-fs', `${effectiveSize}px`);
   root.style.setProperty('--ui-scale', String((effectiveSize / 11).toFixed(4)));
 
-  // Body font application
-  document.body.style.fontFamily = `var(--font-body)`;
+  // Global font application
+  document.body.style.fontFamily = `'${settings.ledgerFont}', sans-serif`;
 }
 
 // ── Provider ──
