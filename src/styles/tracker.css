@@ -15,35 +15,35 @@
   --ui-scale: 1;
 }
 
-/* Flux Dark (default) */
+/* Layout/theme values are injected globally by ThemeProvider */
 .tracker-root {
-  --bg: #0c0e1a;
-  --panel: #12142a;
-  --panel2: #1a1d38;
-  --panel3: #222648;
-  --text: #e8eaff;
-  --muted: #6c7196;
-  --muted2: #4a4e70;
-  --line: rgba(108,113,150,.18);
-  --line2: rgba(108,113,150,.08);
-  --brand: #6366f1;
-  --brand2: #4f46e5;
-  --brand3: rgba(99,102,241,.12);
-  --good: #22c55e;
-  --bad: #ef4444;
-  --warn: #f59e0b;
-  --sidebar-bg: #0a0c18;
-  --topbar-bg: rgba(18,20,42,.95);
-  --card-bg: #12142a;
-  --input-bg: rgba(99,102,241,.08);
-  --t1: #6366f1;
-  --t2: #4f46e5;
-  --t3: #22c55e;
-  --t4: #ef4444;
-  --t5: #a855f7;
-  --hover-card: rgba(99,102,241,.06);
-  --glow: rgba(99,102,241,.2);
-  --kpi-accent: linear-gradient(135deg, #6366f1, #4f46e5);
+  --bg: var(--tracker-bg, #0c0e1a);
+  --panel: var(--tracker-panel, #12142a);
+  --panel2: var(--tracker-panel2, #1a1d38);
+  --panel3: var(--tracker-panel3, #222648);
+  --text: var(--tracker-text, #e8eaff);
+  --muted: var(--tracker-muted, #6c7196);
+  --muted2: var(--tracker-muted2, #4a4e70);
+  --line: var(--tracker-line, rgba(108,113,150,.18));
+  --line2: var(--tracker-line2, rgba(108,113,150,.08));
+  --brand: var(--tracker-brand, #6366f1);
+  --brand2: var(--tracker-brand2, #4f46e5);
+  --brand3: var(--tracker-brand3, rgba(99,102,241,.12));
+  --good: var(--tracker-good, #22c55e);
+  --bad: var(--tracker-bad, #ef4444);
+  --warn: var(--tracker-warn, #f59e0b);
+  --sidebar-bg: var(--tracker-sidebar-bg, #0a0c18);
+  --topbar-bg: var(--tracker-topbar-bg, rgba(18,20,42,.95));
+  --card-bg: var(--tracker-card-bg, #12142a);
+  --input-bg: var(--tracker-input-bg, rgba(99,102,241,.08));
+  --t1: var(--tracker-t1, #6366f1);
+  --t2: var(--tracker-t2, #4f46e5);
+  --t3: var(--tracker-t3, #22c55e);
+  --t4: var(--tracker-t4, #ef4444);
+  --t5: var(--tracker-t5, #a855f7);
+  --hover-card: var(--tracker-hover-card, rgba(99,102,241,.06));
+  --glow: var(--tracker-glow, rgba(99,102,241,.2));
+  --kpi-accent: var(--tracker-kpi-accent, linear-gradient(135deg, #6366f1, #4f46e5));
 
   font-family: var(--lt-font);
   color: var(--text);
