@@ -5,10 +5,15 @@ import {
   kpiFor, totalStock, stockCostQAR, getWACOP,
   rangeLabel, num,
 } from '@/lib/tracker-helpers';
+import { useTheme } from '@/lib/theme-context';
 import '@/styles/tracker.css';
 
 export default function DashboardPage() {
-  const { state, derived } = useMemo(() => createDemoState(), []);
+  const { settings } = useTheme();
+  const { state, derived } = useMemo(() => createDemoState({
+    lowStockThreshold: settings.lowStockThreshold,
+    priceAlertThreshold: settings.priceAlertThreshold,
+  }), [settings.lowStockThreshold, settings.priceAlertThreshold]);
 
   const d1 = kpiFor(state, derived, 'today');
   const d7 = kpiFor(state, derived, '7d');
