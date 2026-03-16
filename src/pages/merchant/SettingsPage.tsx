@@ -79,7 +79,7 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Discoverability</Label>
-                <Select value={form.discoverability} onValueChange={v => setForm(f => ({ ...f, discoverability: v }))}>
+                <Select value={form.discoverability} onValueChange={v => setForm(f => ({ ...f, discoverability: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="public">Public</SelectItem>
