@@ -651,15 +651,21 @@ function applyThemeToDOM(settings: AppSettings) {
   root.style.setProperty('--lt-font', `'${settings.ledgerFont}', sans-serif`);
   root.style.setProperty('--lt-font-mono', `'${layout.fontMono}', 'Fira Code', monospace`);
 
-  // Font size with vision profile
-  const mult = settings.autoFontDisable ? 1 : visionMultiplier(settings.fontVisionProfile);
-  const effectiveSize = Math.round(settings.ledgerFontSize * mult);
-  root.style.setProperty('--ledger-font-size', `${effectiveSize}px`);
-  root.style.setProperty('--ui-fs', `${effectiveSize}px`);
-  root.style.setProperty('--ui-scale', String((effectiveSize / 11).toFixed(4)));
+  // Font size — exact replica of detectOptimalFontSize_ from source repo
+  const base = Number(settings.ledgerFontSize || FONT_CONFIG.baseSize) || FONT_CONFIG.baseSize;
+  const computed = settings.autoFontDisable ? base : detectOptimalFontSize(base, settings.fontVisionProfile);
+  const lfsClamped = Math.max(FONT_CONFIG.minSize, Math.min(FONT_CONFIG.maxSize, computed));
+  const uiScale = Number((lfsClamped / FONT_CONFIG.baseSize).toFixed(4));
+  root.style.setProperty('--app-font', `'${settings.ledgerFont}', sans-serif`);
+  root.style.setProperty('--ui-fs', `${lfsClamped}px`);
+  root.style.setProperty('--ui-scale', String(uiScale));
+  root.style.setProperty('--ledger-font', `'${settings.ledgerFont}', sans-serif`);
+  root.style.setProperty('--ledger-fs', `${lfsClamped}px`);
+  root.style.setProperty('--ledger-font-size', `${lfsClamped}px`);
 
   // Global font application
   document.body.style.fontFamily = `'${settings.ledgerFont}', sans-serif`;
+  document.body.style.fontSize = `${lfsClamped}px`;
 }
 
 // ── Provider ──
