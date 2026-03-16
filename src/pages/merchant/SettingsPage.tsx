@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Check, Save, RotateCcw, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n';
 import {
   useTheme,
   LAYOUTS,
@@ -33,27 +34,28 @@ export default function SettingsPage() {
     clearLogs,
     downloadLogs,
   } = useTheme();
+  const t = useT();
 
   const commitSettings = () => {
     save();
-    toast.success('Settings saved');
+    toast.success(t('settingsSaved'));
   };
 
   const discardSettings = () => {
     discard();
-    toast('Discarded pending changes');
+    toast(t('discardedChanges'));
   };
 
   const curLayoutDef = LAYOUTS.find(l => l.id === draft.layout) || LAYOUTS[0];
   const curThemeEntries = Object.entries(curLayoutDef.themes) as [string, ThemeDef][];
 
   return (
-    <div className="tracker-page">
-      <PageHeader title="Settings" description="Layout templates · themes · data">
+    <div className="tracker-page" dir={t.isRTL ? 'rtl' : 'ltr'}>
+      <PageHeader title={t('settings')} description={t('layoutThemesData')}>
         {dirty && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={discardSettings}><RotateCcw className="w-3 h-3 mr-1" /> Discard</Button>
-            <Button size="sm" onClick={commitSettings}><Save className="w-3 h-3 mr-1" /> Save Settings</Button>
+            <Button variant="outline" size="sm" onClick={discardSettings}><RotateCcw className="w-3 h-3 mr-1" /> {t('discardBtn')}</Button>
+            <Button size="sm" onClick={commitSettings}><Save className="w-3 h-3 mr-1" /> {t('saveSettings')}</Button>
           </div>
         )}
       </PageHeader>
@@ -63,7 +65,7 @@ export default function SettingsPage() {
         <Card className="glass">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-display">🎨 Layout Templates</CardTitle>
+              <CardTitle className="text-sm font-display">{t('layoutTemplates')}</CardTitle>
               <Badge variant="outline" className="text-xs">{currentLayout.name} · {currentLayout.font}</Badge>
             </div>
           </CardHeader>
@@ -96,7 +98,7 @@ export default function SettingsPage() {
 
             {/* Theme Colors */}
             <div>
-              <Label className="text-xs mb-2 block">Color Themes for {currentLayout.name}</Label>
+              <Label className="text-xs mb-2 block">{t('colorThemes')} {currentLayout.name}</Label>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {curThemeEntries.map(([tid, themeDef]) => {
                   const swatchColors = [themeDef.brand, themeDef.brand2, themeDef.good, themeDef.bad, themeDef.warn, themeDef.muted];
@@ -129,11 +131,11 @@ export default function SettingsPage() {
           {/* ── Trading Config ── */}
           <Card className="glass">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-display">⚡ Trading Config</CardTitle>
+              <CardTitle className="text-sm font-display">{t('tradingConfig')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs">Low stock threshold (USDT)</Label>
+                <Label className="text-xs">{t('lowStockThreshold')}</Label>
                 <Input
                   type="number" step={100} min={0}
                   value={draft.lowStockThreshold}
@@ -142,7 +144,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Price alert threshold (%)</Label>
+                <Label className="text-xs">{t('priceAlertThreshold')}</Label>
                 <Input
                   type="number" step={0.5} min={0}
                   value={draft.priceAlertThreshold}
@@ -151,11 +153,11 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Allow invalid trades (no stock)</Label>
+                <Label className="text-xs">{t('allowInvalidTrades')}</Label>
                 <Switch checked={draft.allowInvalidTrades} onCheckedChange={v => update({ allowInvalidTrades: v })} />
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                When enabled, unmatched trades are still stored and shown with "!" but excluded from profit KPIs.
+                {t('allowInvalidTradesDesc')}
               </p>
             </CardContent>
           </Card>
@@ -163,11 +165,11 @@ export default function SettingsPage() {
           {/* ── Fonts & Accessibility ── */}
           <Card className="glass">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-display">🔤 Fonts & Accessibility</CardTitle>
+              <CardTitle className="text-sm font-display">{t('fontsAccessibility')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-xs mb-2 block">Ledger Font</Label>
+                <Label className="text-xs mb-2 block">{t('ledgerFont')}</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {FONTS.map(f => (
                     <button
@@ -186,7 +188,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <Label className="text-xs mb-2 block">Font Size</Label>
+                <Label className="text-xs mb-2 block">{t('fontSize')}</Label>
                 <div className="flex gap-1.5">
                   {FONT_SIZES.map(s => (
                     <button
@@ -204,7 +206,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="border-t pt-3">
-                <Label className="text-xs mb-2 block">Accessibility Profile</Label>
+                <Label className="text-xs mb-2 block">{t('accessibilityProfile')}</Label>
                 <div className="flex gap-1.5 mb-3">
                   {VISION_PROFILES.map(p => (
                     <button
@@ -220,11 +222,11 @@ export default function SettingsPage() {
                   ))}
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Auto-adjust font for screen size</Label>
+                  <Label className="text-xs">{t('autoAdjustFont')}</Label>
                   <Switch checked={!draft.autoFontDisable} onCheckedChange={v => update({ autoFontDisable: !v })} />
                 </div>
                 <p className="text-[9px] text-muted-foreground mt-2">
-                  Auto size: <span className="font-mono">{detectOptimalFontSize(Number(draft.ledgerFontSize || FONT_CONFIG.baseSize), draft.fontVisionProfile)}px</span> (width {typeof window !== 'undefined' ? window.innerWidth : '?'}px)
+                  {t('autoSize')}: <span className="font-mono">{detectOptimalFontSize(Number(draft.ledgerFontSize || FONT_CONFIG.baseSize), draft.fontVisionProfile)}px</span> (width {typeof window !== 'undefined' ? window.innerWidth : '?'}px)
                 </p>
               </div>
             </CardContent>
@@ -234,17 +236,17 @@ export default function SettingsPage() {
           <Card className="glass">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-display">📋 Logs</CardTitle>
+                <CardTitle className="text-sm font-display">{t('logs')}</CardTitle>
                 <Badge variant="outline" className="text-[10px]">{logs.length}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Enable logs</Label>
+                <Label className="text-xs">{t('enableLogs')}</Label>
                 <Switch checked={draft.logsEnabled} onCheckedChange={v => update({ logsEnabled: v })} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Level</Label>
+                <Label className="text-xs">{t('level')}</Label>
                 <div className="flex gap-1.5">
                   {(['error','warn','info'] as const).map(lvl => (
                     <button
@@ -262,14 +264,13 @@ export default function SettingsPage() {
               </div>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" size="sm" className="text-xs" onClick={downloadLogs}>
-                  <Download className="w-3 h-3 mr-1" /> Download
+                  <Download className="w-3 h-3 mr-1" /> {t('download')}
                 </Button>
-                <Button variant="destructive" size="sm" className="text-xs" onClick={() => { clearLogs(); toast('Logs cleared'); }}>
-                  <Trash2 className="w-3 h-3 mr-1" /> Clear
+                <Button variant="destructive" size="sm" className="text-xs" onClick={() => { clearLogs(); toast(t('logsCleared')); }}>
+                  <Trash2 className="w-3 h-3 mr-1" /> {t('clear')}
                 </Button>
               </div>
 
-              {/* Live log tail */}
               {logs.length > 0 && (
                 <ScrollArea className="h-40 border rounded-md p-2">
                   {logs.slice(0, 50).map(entry => (
@@ -292,7 +293,7 @@ export default function SettingsPage() {
               )}
 
               <p className="text-[10px] text-muted-foreground">
-                Client-side logs stored in this browser. Max 500 entries.
+                {t('clientSideLogs')}
               </p>
             </CardContent>
           </Card>

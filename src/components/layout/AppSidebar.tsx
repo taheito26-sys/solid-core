@@ -19,40 +19,45 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { useT, type TranslationKey } from '@/lib/i18n';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 
-const tradingNav = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Orders', icon: ArrowLeftRight, path: '/trading/orders' },
-  { label: 'Stock', icon: Wallet, path: '/trading/stock' },
-  { label: 'Calendar', icon: Calendar, path: '/trading/calendar' },
-  { label: 'P2P Tracker', icon: TrendingUp, path: '/trading/p2p' },
-  { label: 'Portfolio', icon: Wallet, path: '/trading/portfolio' },
-  { label: 'Trades', icon: ArrowLeftRight, path: '/trading/trades' },
-  { label: 'CRM', icon: UserCircle, path: '/crm' },
+const tradingNav: { labelKey: TranslationKey; icon: any; path: string }[] = [
+  { labelKey: 'dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { labelKey: 'orders', icon: ArrowLeftRight, path: '/trading/orders' },
+  { labelKey: 'stock', icon: Wallet, path: '/trading/stock' },
+  { labelKey: 'calendar', icon: Calendar, path: '/trading/calendar' },
+  { labelKey: 'p2pTracker', icon: TrendingUp, path: '/trading/p2p' },
+  { labelKey: 'portfolio', icon: Wallet, path: '/trading/portfolio' },
+  { labelKey: 'trades', icon: ArrowLeftRight, path: '/trading/trades' },
+  { labelKey: 'crm', icon: UserCircle, path: '/crm' },
 ];
 
-const networkNav = [
-  { label: 'Network', icon: Users, path: '/network' },
-  { label: 'Messages', icon: MessageSquare, path: '/messages' },
-  { label: 'Deals', icon: Briefcase, path: '/deals' },
-  { label: 'Analytics', icon: BarChart3, path: '/analytics' },
-  { label: 'Vault', icon: CloudUpload, path: '/vault' },
-  { label: 'Audit', icon: Shield, path: '/audit' },
-  { label: 'Settings', icon: Settings, path: '/settings' },
+const networkNav: { labelKey: TranslationKey; icon: any; path: string }[] = [
+  { labelKey: 'network', icon: Users, path: '/network' },
+  { labelKey: 'messages', icon: MessageSquare, path: '/messages' },
+  { labelKey: 'deals', icon: Briefcase, path: '/deals' },
+  { labelKey: 'analytics', icon: BarChart3, path: '/analytics' },
+  { labelKey: 'vault', icon: CloudUpload, path: '/vault' },
+  { labelKey: 'audit', icon: Shield, path: '/audit' },
+  { labelKey: 'settings', icon: Settings, path: '/settings' },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const { profile, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const t = useT();
 
   return (
-    <aside className={cn(
-      'h-screen flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300',
-      collapsed ? 'w-16' : 'w-64'
-    )}>
+    <aside
+      dir={t.isRTL ? 'rtl' : 'ltr'}
+      className={cn(
+        'h-screen flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300',
+        collapsed ? 'w-16' : 'w-64'
+      )}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!collapsed && (
@@ -60,7 +65,7 @@ export function AppSidebar() {
             <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-sidebar-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-sm tracking-tight">TRACKER</span>
+            <span className="font-display font-bold text-sm tracking-tight">{t('tracker')}</span>
           </div>
         )}
         <button onClick={() => setCollapsed(!collapsed)} className="p-1.5 rounded-md hover:bg-sidebar-accent transition-colors">
@@ -79,7 +84,7 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-1">
-        {!collapsed && <p className="px-4 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Trading</p>}
+        {!collapsed && <p className="px-4 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{t('trading')}</p>}
         {tradingNav.map(item => {
           const active = location.pathname === item.path;
           return (
@@ -94,12 +99,12 @@ export function AppSidebar() {
               )}
             >
               <item.icon className="w-4 h-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span>{t(item.labelKey)}</span>}
             </Link>
           );
         })}
 
-        {!collapsed && <p className="px-4 pt-5 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Network</p>}
+        {!collapsed && <p className="px-4 pt-5 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{t('network')}</p>}
         {networkNav.map(item => {
           const active = location.pathname === item.path || (item.path === '/network' && location.pathname.startsWith('/network'));
           return (
@@ -114,7 +119,7 @@ export function AppSidebar() {
               )}
             >
               <item.icon className="w-4 h-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span>{t(item.labelKey)}</span>}
             </Link>
           );
         })}
@@ -127,14 +132,14 @@ export function AppSidebar() {
           className="flex items-center gap-3 mx-0 px-3 py-2 rounded-md text-sm hover:bg-sidebar-accent transition-colors"
         >
           <Bell className="w-4 h-4" />
-          {!collapsed && <span>Notifications</span>}
+          {!collapsed && <span>{t('notifications')}</span>}
         </Link>
         <button
           onClick={logout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm text-destructive hover:bg-sidebar-accent transition-colors"
         >
           <LogOut className="w-4 h-4" />
-          {!collapsed && <span>Logout</span>}
+          {!collapsed && <span>{t('logout')}</span>}
         </button>
       </div>
     </aside>
