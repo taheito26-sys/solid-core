@@ -78,6 +78,7 @@ const translations = {
   avPrice: { en: 'Av Price', ar: 'متوسط السعر' },
   cash: { en: 'Cash', ar: 'نقد' },
   net: { en: 'Net', ar: 'صافي' },
+  stock: { en: 'Stock', ar: 'المخزون' },
 
   // ── Orders ──
   newSale: { en: '+ New Sale', ar: '+ بيع جديد' },
