@@ -80,6 +80,9 @@ const App = () => (
               <Route path="/trading/p2p" element={<P2PTrackerPage />} />
               <Route path="/trading/portfolio" element={<PortfolioPage />} />
               <Route path="/trading/trades" element={<TradesPage />} />
+              <Route path="/trading/orders" element={<OrdersPage />} />
+              <Route path="/trading/stock" element={<StockPage />} />
+              <Route path="/trading/calendar" element={<CalendarPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 
