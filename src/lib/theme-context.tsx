@@ -652,12 +652,53 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [dirty, setDirty] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>(loadLogs);
   const logsRef = useRef(logs);
+  const settingsRef = useRef(draft);
   logsRef.current = logs;
+  settingsRef.current = draft;
+
+  const pushLog = useCallback((level: LogEntry['level'], message: string, detail?: string) => {
+    const settingsNow = settingsRef.current;
+    if (!settingsNow.logsEnabled) return;
+    const levels: Record<LogEntry['level'], number> = { error: 0, warn: 1, info: 2 };
+    if (levels[level] > levels[settingsNow.logLevel]) return;
+
+    const entry: LogEntry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      ts: Date.now(),
+      level,
+      message,
+      detail,
+    };
+
+    setLogs(prev => {
+      const next = [entry, ...prev].slice(0, 500);
+      localStorage.setItem('tracker_logs', JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   // Apply theme on every draft change (live preview)
   useEffect(() => {
     applyThemeToDOM(draft);
   }, [draft]);
+
+  // Runtime error capture
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => {
+      pushLog('error', event.message || 'Runtime error', String(event.error?.stack || event.error || 'Unknown error'));
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      pushLog('error', 'Unhandled promise rejection', String(event.reason ?? 'Unknown reason'));
+    };
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
+  }, [pushLog]);
 
   // Load all Google Fonts on mount
   useEffect(() => {
@@ -670,37 +711,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const update = useCallback((patch: Partial<AppSettings>) => {
+    const changed = Object.keys(patch).filter((key) => (draft as Record<string, unknown>)[key] !== (patch as Record<string, unknown>)[key]);
+    if (changed.length === 0) return;
+
     setDraft(prev => ({ ...prev, ...patch }));
     setDirty(true);
-  }, []);
+
+    if (!(patch.logsEnabled === false && changed.length === 1)) {
+      pushLog('info', `Settings updated: ${changed.join(', ')}`);
+    }
+  }, [draft, pushLog]);
 
   const save = useCallback(() => {
     localStorage.setItem('tracker_settings', JSON.stringify(draft));
     setSaved(draft);
     setDirty(false);
-  }, [draft]);
+    pushLog('info', 'Settings saved');
+  }, [draft, pushLog]);
 
   const discard = useCallback(() => {
     setDraft(saved);
     setDirty(false);
-  }, [saved]);
+    pushLog('warn', 'Pending settings changes discarded');
+  }, [saved, pushLog]);
 
-  // Logging
   const addLog = useCallback((level: LogEntry['level'], message: string, detail?: string) => {
-    const settingsNow = draft;
-    if (!settingsNow.logsEnabled) return;
-    const levels: Record<string, number> = { error: 0, warn: 1, info: 2 };
-    if (levels[level] > levels[settingsNow.logLevel]) return;
-    const entry: LogEntry = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      ts: Date.now(), level, message, detail,
-    };
-    setLogs(prev => {
-      const next = [entry, ...prev].slice(0, 500);
-      localStorage.setItem('tracker_logs', JSON.stringify(next));
-      return next;
-    });
-  }, [draft]);
+    pushLog(level, message, detail);
+  }, [pushLog]);
 
   const clearLogs = useCallback(() => {
     setLogs([]);
