@@ -38,6 +38,7 @@ const networkNav = [
   { label: 'Messages', icon: MessageSquare, path: '/messages' },
   { label: 'Deals', icon: Briefcase, path: '/deals' },
   { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { label: 'Vault', icon: CloudUpload, path: '/vault' },
   { label: 'Audit', icon: Shield, path: '/audit' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
