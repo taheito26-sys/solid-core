@@ -12,16 +12,14 @@ import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import OnboardingPage from "./pages/merchant/OnboardingPage";
 import DashboardPage from "./pages/merchant/DashboardPage";
-import DirectoryPage from "./pages/merchant/DirectoryPage";
-import InvitationsPage from "./pages/merchant/InvitationsPage";
-import RelationshipsPage from "./pages/merchant/RelationshipsPage";
+import NetworkPage from "./pages/merchant/NetworkPage";
 import RelationshipWorkspace from "./pages/merchant/RelationshipWorkspace";
 import MessagesPage from "./pages/merchant/MessagesPage";
-import ApprovalsPage from "./pages/merchant/ApprovalsPage";
 import DealsPage from "./pages/merchant/DealsPage";
 import AnalyticsPage from "./pages/merchant/AnalyticsPage";
 import AuditPage from "./pages/merchant/AuditPage";
 import SettingsPage from "./pages/merchant/SettingsPage";
+import CRMPage from "./pages/merchant/CRMPage";
 import P2PTrackerPage from "./pages/trading/P2PTrackerPage";
 import PortfolioPage from "./pages/trading/PortfolioPage";
 import TradesPage from "./pages/trading/TradesPage";
@@ -43,7 +41,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function ProfileGuard({ children }: { children: React.ReactNode }) {
   const { profile, isLoading } = useAuth();
   if (isLoading) return null;
-  if (!profile) return <Navigate to="/merchant/onboarding" replace />;
+  if (!profile) return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 }
 
@@ -62,32 +60,38 @@ const App = () => (
             <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
             {/* Onboarding */}
-            <Route path="/merchant/onboarding" element={<AuthGuard><OnboardingPage /></AuthGuard>} />
+            <Route path="/onboarding" element={<AuthGuard><OnboardingPage /></AuthGuard>} />
 
             {/* App Shell */}
             <Route element={<AuthGuard><ProfileGuard><AppLayout /></ProfileGuard></AuthGuard>}>
-              <Route path="/merchant" element={<DashboardPage />} />
-              <Route path="/merchant/directory" element={<DirectoryPage />} />
-              <Route path="/merchant/invitations" element={<InvitationsPage />} />
-              <Route path="/merchant/relationships" element={<RelationshipsPage />} />
-              <Route path="/merchant/relationships/:id" element={<RelationshipWorkspace />} />
-              <Route path="/merchant/messages" element={<MessagesPage />} />
-              <Route path="/merchant/approvals" element={<ApprovalsPage />} />
-              <Route path="/merchant/deals" element={<DealsPage />} />
-              <Route path="/merchant/analytics" element={<AnalyticsPage />} />
-              <Route path="/merchant/audit" element={<AuditPage />} />
-              <Route path="/merchant/settings" element={<SettingsPage />} />
-              <Route path="/trading/p2p" element={<P2PTrackerPage />} />
-              <Route path="/trading/portfolio" element={<PortfolioPage />} />
-              <Route path="/trading/trades" element={<TradesPage />} />
+              {/* Trading */}
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/trading/orders" element={<OrdersPage />} />
               <Route path="/trading/stock" element={<StockPage />} />
               <Route path="/trading/calendar" element={<CalendarPage />} />
+              <Route path="/trading/p2p" element={<P2PTrackerPage />} />
+              <Route path="/trading/portfolio" element={<PortfolioPage />} />
+              <Route path="/trading/trades" element={<TradesPage />} />
+              <Route path="/crm" element={<CRMPage />} />
+
+              {/* Network (combined: Directory + Invitations + Relationships + Approvals) */}
+              <Route path="/network" element={<NetworkPage />} />
+              <Route path="/network/relationships/:id" element={<RelationshipWorkspace />} />
+
+              {/* Supporting */}
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/deals" element={<DealsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/audit" element={<AuditPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
 
             {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/merchant" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Legacy redirects */}
+            <Route path="/merchant" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/merchant/*" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
