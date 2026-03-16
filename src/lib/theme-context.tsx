@@ -705,6 +705,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyThemeToDOM(draft);
   }, [draft]);
 
+  // Auto-refresh font size on resize (matching source repo)
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        // Only re-apply if auto-font is enabled
+        if (!settingsRef.current.autoFontDisable) {
+          applyThemeToDOM(settingsRef.current);
+        }
+      }, 250);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (t) clearTimeout(t);
+    };
+  }, []);
+
   // Runtime error capture
   useEffect(() => {
     const onError = (event: ErrorEvent) => {
