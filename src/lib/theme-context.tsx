@@ -764,7 +764,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setDraft(prev => ({ ...prev, ...patch }));
     setDirty(true);
 
-    if (!(patch.logsEnabled === false && changed.length === 1)) {
+    const isTypingOnly = changed.length === 1 && changed[0] === 'searchQuery';
+    if (!(patch.logsEnabled === false && changed.length === 1) && !isTypingOnly) {
       pushLog('info', `Settings updated: ${changed.join(', ')}`);
     }
   }, [draft, pushLog]);
