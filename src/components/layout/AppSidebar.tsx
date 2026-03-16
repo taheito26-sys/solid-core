@@ -1,47 +1,44 @@
 import { useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Search,
-  Mail,
+  ArrowLeftRight,
+  Wallet,
+  TrendingUp,
   Users,
   MessageSquare,
-  CheckSquare,
   Briefcase,
   BarChart3,
   Shield,
   Settings,
-  TrendingUp,
-  ArrowLeftRight,
   Bell,
   LogOut,
   ChevronLeft,
-  Wallet,
+  Calendar,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 
-const merchantNav = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/merchant' },
-  { label: 'Directory', icon: Search, path: '/merchant/directory' },
-  { label: 'Invitations', icon: Mail, path: '/merchant/invitations' },
-  { label: 'Relationships', icon: Users, path: '/merchant/relationships' },
-  { label: 'Messages', icon: MessageSquare, path: '/merchant/messages' },
-  { label: 'Approvals', icon: CheckSquare, path: '/merchant/approvals' },
-  { label: 'Deals', icon: Briefcase, path: '/merchant/deals' },
-  { label: 'Analytics', icon: BarChart3, path: '/merchant/analytics' },
-  { label: 'Audit', icon: Shield, path: '/merchant/audit' },
-  { label: 'Settings', icon: Settings, path: '/merchant/settings' },
-];
-
 const tradingNav = [
-  { label: 'P2P Tracker', icon: TrendingUp, path: '/trading/p2p' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Orders', icon: ArrowLeftRight, path: '/trading/orders' },
   { label: 'Stock', icon: Wallet, path: '/trading/stock' },
-  { label: 'Calendar', icon: LayoutDashboard, path: '/trading/calendar' },
+  { label: 'Calendar', icon: Calendar, path: '/trading/calendar' },
+  { label: 'P2P Tracker', icon: TrendingUp, path: '/trading/p2p' },
   { label: 'Portfolio', icon: Wallet, path: '/trading/portfolio' },
   { label: 'Trades', icon: ArrowLeftRight, path: '/trading/trades' },
+  { label: 'CRM', icon: UserCircle, path: '/crm' },
+];
+
+const networkNav = [
+  { label: 'Network', icon: Users, path: '/network' },
+  { label: 'Messages', icon: MessageSquare, path: '/messages' },
+  { label: 'Deals', icon: Briefcase, path: '/deals' },
+  { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { label: 'Audit', icon: Shield, path: '/audit' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
 export function AppSidebar() {
@@ -80,8 +77,8 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-1">
-        {!collapsed && <p className="px-4 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Merchant</p>}
-        {merchantNav.map(item => {
+        {!collapsed && <p className="px-4 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Trading</p>}
+        {tradingNav.map(item => {
           const active = location.pathname === item.path;
           return (
             <Link
@@ -100,9 +97,9 @@ export function AppSidebar() {
           );
         })}
 
-        {!collapsed && <p className="px-4 pt-5 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Trading</p>}
-        {tradingNav.map(item => {
-          const active = location.pathname === item.path;
+        {!collapsed && <p className="px-4 pt-5 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Network</p>}
+        {networkNav.map(item => {
+          const active = location.pathname === item.path || (item.path === '/network' && location.pathname.startsWith('/network'));
           return (
             <Link
               key={item.path}
