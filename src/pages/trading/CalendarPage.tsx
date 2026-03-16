@@ -3,10 +3,15 @@ import { createDemoState } from '@/lib/tracker-demo-data';
 import {
   fmtQ, fmtU, fmtP, fmtPct, fmtQWithUnit,
 } from '@/lib/tracker-helpers';
+import { useTheme } from '@/lib/theme-context';
 import '@/styles/tracker.css';
 
 export default function CalendarPage() {
-  const { state, derived } = useMemo(() => createDemoState(), []);
+  const { settings } = useTheme();
+  const { state, derived } = useMemo(() => createDemoState({
+    lowStockThreshold: settings.lowStockThreshold,
+    priceAlertThreshold: settings.priceAlertThreshold,
+  }), [settings.lowStockThreshold, settings.priceAlertThreshold]);
   const [cal, setCal] = useState(state.cal);
 
   const mn = ['January','February','March','April','May','June','July','August','September','October','November','December'];

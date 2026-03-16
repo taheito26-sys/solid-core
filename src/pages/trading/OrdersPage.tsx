@@ -4,10 +4,15 @@ import {
   fmtU, fmtP, fmtQ, fmtPct, fmtDate, fmtQWithUnit,
   getWACOP, inRange, rangeLabel,
 } from '@/lib/tracker-helpers';
+import { useTheme } from '@/lib/theme-context';
 import '@/styles/tracker.css';
 
 export default function OrdersPage() {
-  const { state, derived } = useMemo(() => createDemoState(), []);
+  const { settings } = useTheme();
+  const { state, derived } = useMemo(() => createDemoState({
+    lowStockThreshold: settings.lowStockThreshold,
+    priceAlertThreshold: settings.priceAlertThreshold,
+  }), [settings.lowStockThreshold, settings.priceAlertThreshold]);
   const [query, setQuery] = useState('');
   const wacop = getWACOP(derived);
   const rLabel = rangeLabel(state.range);

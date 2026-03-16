@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
 import { createDemoState } from '@/lib/tracker-demo-data';
 import { fmtU, fmtDate } from '@/lib/tracker-helpers';
+import { useTheme } from '@/lib/theme-context';
 import '@/styles/tracker.css';
 
 export default function CRMPage() {
-  const { state } = useMemo(() => createDemoState(), []);
+  const { settings } = useTheme();
+  const { state } = useMemo(() => createDemoState({
+    lowStockThreshold: settings.lowStockThreshold,
+    priceAlertThreshold: settings.priceAlertThreshold,
+  }), [settings.lowStockThreshold, settings.priceAlertThreshold]);
   const [tab, setTab] = useState<'customers' | 'suppliers'>('customers');
   const [search, setSearch] = useState('');
 
